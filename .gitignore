@@ -1,41 +1,60 @@
-# Prerequisites
-*.d
+# --- Build Directories ---
+# C'est ici que CMake génère tout. On ne veut jamais versionner ça.
+build/
+build_debug/
+build_release/
+bin/
+out/
+lib/
 
-# Compiled Object files
-*.slo
-*.lo
+# --- CMake Specifics (in case you run cmake in root) ---
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+Makefile
+cmake_install.cmake
+install_manifest.txt
+*.cmake
+!CMakeLists.txt
+!/cmake/*.cmake
+
+# --- C++ Compilation Artifacts ---
 *.o
 *.obj
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Linker files
-*.ilk
-
-# Debugger Files
-*.pdb
-
-# Compiled Dynamic libraries
+*.exe
+*.dll
 *.so
 *.dylib
-*.dll
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
-*.lai
-*.la
 *.a
 *.lib
-
-# Executables
-*.exe
 *.out
 *.app
 
-# debug information files
-*.dwo
+# --- ImGui Specific ---
+# ImGui sauvegarde la position des fenêtres ici. 
+# Ça change tout le temps et crée des conflits git inutiles.
+imgui.ini
+
+# --- IDE & Editors ---
+# VS Code
+.vscode/
+*.code-workspace
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.ipch
+*.sdf
+*.opensdf
+
+# CLion (JetBrains)
+.idea/
+cmake-build-*/
+
+# XCode
+*.xcodeproj
+*.xcworkspace
+xcuserdata/
+
+# --- OS Specific ---
