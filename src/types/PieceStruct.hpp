@@ -3,7 +3,7 @@
 #include "ColorEnum.hpp"
 #include "PieceEnum.hpp"
 
-struct Piece {
+struct PieceOld {
   PieceType type;
   PieceColor color;
 };

@@ -35,6 +35,8 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 set_target_properties(${PROJECT_NAME} PROPERTIES
     CXX_EXTENSIONS OFF)
 
+    target_include_directories(${PROJECT_NAME} PRIVATE ${GLM_INCLUDE_DIRS})
+    
 # Add all the source files
 file(GLOB_RECURSE MY_SOURCES CONFIGURE_DEPENDS src/*)
 target_sources(${PROJECT_NAME} PRIVATE ${MY_SOURCES})
@@ -42,4 +44,4 @@ target_include_directories(${PROJECT_NAME} PRIVATE src)
 
 # Add quick-imgui library
 add_subdirectory(lib/quick_imgui)
-target_link_libraries(${PROJECT_NAME} PRIVATE quick_imgui::quick_imgui)
+target_link_libraries(${PROJECT_NAME} PRIVATE quick_imgui::quick_imgui )
