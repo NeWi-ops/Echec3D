@@ -5,7 +5,7 @@
 #include <limits>
 #include <vector>
 
-#include "../model/Pieces/queen.hpp"
+#include "../model/Pieces/Base/queen.hpp"
 
 int SimpleAI::getPieceValue(PieceType type) {
   switch (type) {

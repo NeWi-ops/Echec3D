@@ -1,13 +1,11 @@
 #include "FenConverter.hpp"
+#include <cctype> // Nécessaire pour toupper, tolower, isdigit
 #include <sstream>
 #include <vector>
 
-#include "./../model/Pieces/bishop.hpp"
-#include "./../model/Pieces/king.hpp"
-#include "./../model/Pieces/knight.hpp"
-#include "./../model/Pieces/pawn.hpp"
-#include "./../model/Pieces/queen.hpp"
-#include "./../model/Pieces/rook.hpp"
+// On retire tous les includes des pièces spécifiques !
+// On ajoute juste le Chef d'Orchestre (la Factory)
+#include "./../model/Pieces/piecefactory.hpp"
 
 std::string FenConverter::save(const Game &game) {
   std::stringstream ss;
@@ -17,6 +15,7 @@ std::string FenConverter::save(const Game &game) {
     int emptyCount = 0;
     for (int x = 0; x < 8; ++x) {
       const Piece *p = board.getPiece(x, y);
+
       if (!p) {
         emptyCount++;
       } else {
@@ -24,30 +23,20 @@ std::string FenConverter::save(const Game &game) {
           ss << emptyCount;
           emptyCount = 0;
         }
-        char c = '?';
-        switch (p->getType()) {
-        case PieceType::Pawn:
-          c = 'p';
-          break;
-        case PieceType::Rook:
-          c = 'r';
-          break;
-        case PieceType::Knight:
-          c = 'n';
-          break;
-        case PieceType::Bishop:
-          c = 'b';
-          break;
-        case PieceType::Queen:
-          c = 'q';
-          break;
-        case PieceType::King:
-          c = 'k';
-          break;
-        }
+
+        // --- NOUVEAU CODE (Dynamique) ---
+        // On récupère le caractère de base (ex: 'p', 'A', 'k')
+        char c = p->getFenChar();
+
+        // On gère la casse selon la couleur (Majuscule = Blanc, Minuscule =
+        // Noir)
         if (p->getColor() == PieceColor::White)
           c = toupper(c);
+        else
+          c = tolower(c);
+
         ss << c;
+        // --------------------------------
       }
     }
     if (emptyCount > 0)
@@ -57,7 +46,7 @@ std::string FenConverter::save(const Game &game) {
   }
 
   ss << " " << (game.getCurrentTurn() == PieceColor::White ? "w" : "b");
-  ss << " - - 0 1";
+  ss << " - - 0 1"; // Droits de roque et en-passant par défaut pour l'instant
 
   return ss.str();
 }
@@ -79,6 +68,8 @@ void FenConverter::load(Game &game, const std::string &fen) {
 
   int y = 0;
   int x = 0;
+
+  // Lecture de la partie Plateau du FEN
   for (char c : parts[0]) {
     if (c == '/') {
       y++;
@@ -86,32 +77,24 @@ void FenConverter::load(Game &game, const std::string &fen) {
     } else if (isdigit(c)) {
       x += (c - '0');
     } else {
+      // C'est une pièce !
       PieceColor color = isupper(c) ? PieceColor::White : PieceColor::Black;
-      char typeChar = tolower(c);
-      std::unique_ptr<Piece> newPiece;
 
-      switch (typeChar) {
-      case 'p':
-        newPiece = std::make_unique<Pawn>(color);
-        break;
-      case 'r':
-        newPiece = std::make_unique<Rook>(color);
-        break;
-      case 'n':
-        newPiece = std::make_unique<Knight>(color);
-        break;
-      case 'b':
-        newPiece = std::make_unique<Bishop>(color);
-        break;
-      case 'q':
-        newPiece = std::make_unique<Queen>(color);
-        break;
-      case 'k':
-        newPiece = std::make_unique<King>(color);
-        break;
-      }
-      if (newPiece)
+      // --- NOUVEAU CODE (Factory) ---
+      // On demande à l'usine de créer la pièce correspondant à la lettre 'c'
+      // (La Factory gère elle-même le mapping 'A' -> Paladin, 'r' -> Rook...)
+      std::unique_ptr<Piece> newPiece = PieceFactory::createPiece(c, color);
+
+      if (newPiece) {
+        // Si l'usine a réussi à créer la pièce, on la place
+        // Note: J'utilise setPieceAt selon ton code précédent
         newBoard->setPieceAt({x, y}, *newPiece);
+      } else {
+        // Optionnel : Log d'erreur si une lettre inconnue est trouvée
+        // std::cerr << "Piece inconnue dans le FEN : " << c << std::endl;
+      }
+      // ------------------------------
+
       x++;
     }
   }

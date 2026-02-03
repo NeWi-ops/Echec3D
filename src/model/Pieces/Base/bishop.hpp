@@ -1,19 +1,20 @@
 #pragma once
 
-#include "./../../types/MoveStruct.hpp"
-#include "./../Board/board.hpp"
-#include "./piece.hpp"
+#include "./../../../types/MoveStruct.hpp"
+#include "./../../Board/board.hpp"
+#include "./../piece.hpp"
+#include "./../piecefactory.hpp"
 #include <vector>
 
-class Rook : public Piece {
+class Bishop : public Piece {
 public:
-  explicit Rook(PieceColor color) : Piece(color, PieceType::Rook) {}
+  explicit Bishop(PieceColor color) : Piece(color, PieceType::Bishop) {}
 
   std::vector<Coords> getPseudoLegalMoves(const Board &board,
                                           Coords coords) const override {
     std::vector<Coords> moves;
 
-    int directions[4][2] = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
+    int directions[4][2] = {{-1, -1}, {1, -1}, {-1, 1}, {1, 1}};
 
     for (auto dir : directions) {
       int dx = dir[0];
@@ -51,6 +52,12 @@ public:
   };
 
   std::unique_ptr<Piece> clone() const override {
-    return std::make_unique<Rook>(*this);
+    return std::make_unique<Bishop>(*this);
   }
+
+  char getFenChar() const override { return 'b'; }
+
+  std::string getName() const override { return "Bishop"; }
 };
+
+REGISTER_PIECE(Bishop, 'b');

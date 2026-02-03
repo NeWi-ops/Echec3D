@@ -17,8 +17,6 @@ public:
   const Piece &getPieceAt(int x, int y) const;
   void setPieceAt(int x, int y, const Piece &piece);
 
-  void setupStandardBoard();
-
   void clear();
 
   [[nodiscard]] Piece *getPiece(Coords pos) const;

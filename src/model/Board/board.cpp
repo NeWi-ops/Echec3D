@@ -1,10 +1,10 @@
 #include "board.hpp"
-#include "./../Pieces/bishop.hpp"
-#include "./../Pieces/king.hpp"
-#include "./../Pieces/knight.hpp"
-#include "./../Pieces/pawn.hpp"
-#include "./../Pieces/queen.hpp"
-#include "./../Pieces/rook.hpp"
+#include "./../Pieces/Base/bishop.hpp"
+#include "./../Pieces/Base/king.hpp"
+#include "./../Pieces/Base/knight.hpp"
+#include "./../Pieces/Base/pawn.hpp"
+#include "./../Pieces/Base/queen.hpp"
+#include "./../Pieces/Base/rook.hpp"
 #include <memory>
 
 Board::Board() {
@@ -45,32 +45,6 @@ void Board::clear() {
       square.reset();
     }
   }
-}
-
-void Board::setupStandardBoard() {
-
-  this->clear();
-
-  for (int x = 0; x < 8; ++x) {
-    this->board[1][x] = std::make_unique<Pawn>(PieceColor::Black);
-    this->board[6][x] = std::make_unique<Pawn>(PieceColor::White);
-  }
-
-  auto setupMajorRow = [&](int y, PieceColor color) {
-    this->board[y][0] = std::make_unique<Rook>(color);
-    this->board[y][1] = std::make_unique<Knight>(color);
-    this->board[y][2] = std::make_unique<Bishop>(color);
-
-    this->board[y][3] = std::make_unique<Queen>(color);
-    this->board[y][4] = std::make_unique<King>(color);
-
-    this->board[y][5] = std::make_unique<Bishop>(color);
-    this->board[y][6] = std::make_unique<Knight>(color);
-    this->board[y][7] = std::make_unique<Rook>(color);
-  };
-
-  setupMajorRow(0, PieceColor::Black);
-  setupMajorRow(7, PieceColor::White);
 }
 
 void Board::movePiece(Coords from, Coords to) {

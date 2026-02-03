@@ -2,10 +2,10 @@
 #include "./../ai/SimpleAI.hpp"
 #include "./../utils/FenConverter.hpp"
 #include "./Scene3D.hpp"
+#include <algorithm>
 #include <iostream>
 #include <sstream>
 #include <string>
-#include <algorithm>
 
 void GameRenderer::render(Game &game, Scene3D *scene3D) {
   ImGuiIO &io = ImGui::GetIO();

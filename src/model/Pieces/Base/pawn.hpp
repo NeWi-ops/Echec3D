@@ -1,10 +1,10 @@
 #pragma once
 
-#include "./../../types/MoveStruct.hpp"
-#include "./../Board/board.hpp"
-#include "./piece.hpp"
+#include "./../../../types/MoveStruct.hpp"
+#include "./../../Board/board.hpp"
+#include "./../piece.hpp"
+#include "./../piecefactory.hpp"
 #include <vector>
-
 class Pawn : public Piece {
 public:
   explicit Pawn(PieceColor color) : Piece(color, PieceType::Pawn) {}
@@ -52,4 +52,10 @@ public:
   std::unique_ptr<Piece> clone() const override {
     return std::make_unique<Pawn>(*this);
   }
+
+  char getFenChar() const override { return 'p'; }
+
+  std::string getName() const override { return "Pawn"; }
 };
+
+REGISTER_PIECE(Pawn, 'p')

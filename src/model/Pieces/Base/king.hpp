@@ -1,8 +1,9 @@
 #pragma once
 
-#include "./../../types/MoveStruct.hpp"
-#include "./../Board/board.hpp"
-#include "./piece.hpp"
+#include "./../../../types/MoveStruct.hpp"
+#include "./../../Board/board.hpp"
+#include "./../piece.hpp"
+#include "./../piecefactory.hpp"
 #include <vector>
 
 class King : public Piece {
@@ -36,4 +37,10 @@ public:
   std::unique_ptr<Piece> clone() const override {
     return std::make_unique<King>(*this);
   }
+
+  char getFenChar() const override { return 'k'; }
+
+  std::string getName() const override { return "King"; }
 };
+
+REGISTER_PIECE(King, 'k');

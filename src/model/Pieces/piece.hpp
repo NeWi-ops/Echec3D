@@ -25,6 +25,10 @@ public:
     return (color == PieceColor::White) ? PieceColor::Black : PieceColor::White;
   }
 
+  virtual char getFenChar() const = 0;
+  virtual void onMoveFinished(Board &board, Move move) {};
+  virtual std::string getName() const = 0;
+
 protected:
   Piece(PieceColor color, PieceType type) : m_color(color), m_type(type) {}
 

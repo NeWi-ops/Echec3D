@@ -2,23 +2,26 @@
 #include <array>
 #include <iostream>
 
+#include "./../types/GameVarEnum.hpp"
 #include "./../types/PieceStruct.hpp"
 #include "./Arbiter/arbiter.hpp"
-#include "./Pieces/bishop.hpp"
-#include "./Pieces/king.hpp"
-#include "./Pieces/knight.hpp"
-#include "./Pieces/pawn.hpp"
-#include "./Pieces/queen.hpp"
-#include "./Pieces/rook.hpp"
+#include "./Pieces/Base/bishop.hpp"
+#include "./Pieces/Base/king.hpp"
+#include "./Pieces/Base/knight.hpp"
+#include "./Pieces/Base/pawn.hpp"
+#include "./Pieces/Base/queen.hpp"
+#include "./Pieces/Base/rook.hpp"
+
+#include "./../utils/FenConverter.hpp"
 
 Game::Game() {
   this->board = std::make_unique<Board>();
-  this->board->setupStandardBoard();
+  this->loadVariant(GameVariant::Paladin);
 }
 
 void Game::reset() {
   this->board = std::make_unique<Board>();
-  this->board->setupStandardBoard();
+  this->loadVariant(GameVariant::Paladin);
   this->m_currentTurn = PieceColor::White;
   this->m_turnCount = 1;
   this->m_state = GameState::InProgress;
@@ -179,4 +182,21 @@ void Game::undoLastMove() {
     m_state = GameState::Stalemate;
   else
     m_state = GameState::InProgress;
+}
+
+void Game::loadVariant(GameVariant variant) {
+  board->clear(); // Vide le plateau
+
+  switch (variant) {
+  case GameVariant::Classic:
+
+    // FEN classique
+    FenConverter::load(
+        *this, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    break;
+  case GameVariant::Paladin:
+    FenConverter::load(
+        *this, "rabqkbar/pppppppp/8/8/8/8/PPPPPPPP/RABQKBAR w KQkq - 0 1");
+    break;
+  }
 }

@@ -36,8 +36,7 @@ int main() {
                  0x0020, 0x00FF, 0x2000, 0x27FF, 0,
              };
 
-             const char *fontPath =
-                 "./ressources/fonts/DejaVuSans.ttf";
+             const char *fontPath = "./ressources/fonts/DejaVuSans.ttf";
              std::ifstream fileCheck(fontPath);
 
              if (fileCheck.good()) {

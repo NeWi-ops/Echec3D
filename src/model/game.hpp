@@ -2,6 +2,7 @@
 
 #include "./../types/ColorEnum.hpp"
 #include "./../types/GameStateEnum.hpp"
+#include "./../types/GameVarEnum.hpp"
 #include "Board/board.hpp"
 #include <array>
 #include <iostream>
@@ -41,4 +42,6 @@ public:
     m_currentTurn = Piece::opposite(m_currentTurn);
     switchTurn();
   }
+
+  void loadVariant(GameVariant variantName);
 };
