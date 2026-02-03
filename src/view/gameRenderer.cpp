@@ -5,6 +5,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <algorithm>
 
 void GameRenderer::render(Game &game, Scene3D *scene3D) {
   ImGuiIO &io = ImGui::GetIO();

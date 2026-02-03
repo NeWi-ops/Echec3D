@@ -16,7 +16,7 @@ add_executable(${PROJECT_NAME})
 
 # Choose your C++ version
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_20)
-
+target_include_directories(${PROJECT_NAME} PRIVATE lib)
 # Enable many good warnings.
 # /WX and -Werror enable "warnings as errors": This means that your code won't compile if you have any warning.
 # This forces you to take warnings into account, which is a good practice because warnings are here for a reason and can save you from a lot of bugs!
@@ -45,3 +45,10 @@ target_include_directories(${PROJECT_NAME} PRIVATE src)
 # Add quick-imgui library
 add_subdirectory(lib/quick_imgui)
 target_link_libraries(${PROJECT_NAME} PRIVATE quick_imgui::quick_imgui )
+
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    "${CMAKE_SOURCE_DIR}/src/ressources"
+    "$<TARGET_FILE_DIR:${PROJECT_NAME}>/ressources"
+    COMMENT "Copie des ressources dans le dossier de build..."
+)
