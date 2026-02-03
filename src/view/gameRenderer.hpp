@@ -1,7 +1,7 @@
 #pragma once
 #include "./../model/Arbiter/arbiter.hpp"
+#include "./../model/Types/CoordsStruct.hpp"
 #include "./../model/game.hpp"
-#include "./../types/CoordsStruct.hpp"
 #include "./Scene3D.hpp"
 #include "imgui.h"
 #include <optional>

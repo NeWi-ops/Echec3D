@@ -1,7 +1,7 @@
 #pragma once
 #include "./../model/Board/board.hpp"
+#include "./../model/Types/MoveStruct.hpp"
 #include "./../model/game.hpp"
-#include "./../types/MoveStruct.hpp"
 
 class SimpleAI {
 public:

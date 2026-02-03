@@ -1,24 +1,26 @@
 #include "./game.hpp"
-#include <array>
-#include <iostream>
-
-#include "./../types/PieceStruct.hpp"
 #include "./Arbiter/arbiter.hpp"
+#include "./Fen/FenConverter.hpp"
 #include "./Pieces/bishop.hpp"
 #include "./Pieces/king.hpp"
 #include "./Pieces/knight.hpp"
 #include "./Pieces/pawn.hpp"
 #include "./Pieces/queen.hpp"
 #include "./Pieces/rook.hpp"
+#include "./Types/PieceStruct.hpp"
+#include <array>
+#include <iostream>
 
 Game::Game() {
   this->board = std::make_unique<Board>();
-  this->board->setupStandardBoard();
+  FenConverter::load(
+      *this, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - - 0 1");
 }
 
 void Game::reset() {
   this->board = std::make_unique<Board>();
-  this->board->setupStandardBoard();
+  FenConverter::load(
+      *this, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - - 0 1");
   this->m_currentTurn = PieceColor::White;
   this->m_turnCount = 1;
   this->m_state = GameState::InProgress;

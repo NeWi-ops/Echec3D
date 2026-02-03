@@ -1,7 +1,7 @@
 #pragma once
 
-#include "./../../types/MoveStruct.hpp"
 #include "./../Board/board.hpp"
+#include "./../Types/MoveStruct.hpp"
 #include "./piece.hpp"
 #include <vector>
 

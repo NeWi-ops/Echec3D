@@ -1,9 +1,9 @@
 #pragma once
 
-#include "./../../types/ColorEnum.hpp"
-#include "./../../types/PieceEnum.hpp"
+#include "./../Types/ColorEnum.hpp"
+#include "./../Types/PieceEnum.hpp"
 
-#include "./../../types/MoveStruct.hpp"
+#include "./../Types/MoveStruct.hpp"
 #include <memory>
 #include <vector>
 

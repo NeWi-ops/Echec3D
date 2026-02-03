@@ -47,32 +47,6 @@ void Board::clear() {
   }
 }
 
-void Board::setupStandardBoard() {
-
-  this->clear();
-
-  for (int x = 0; x < 8; ++x) {
-    this->board[1][x] = std::make_unique<Pawn>(PieceColor::Black);
-    this->board[6][x] = std::make_unique<Pawn>(PieceColor::White);
-  }
-
-  auto setupMajorRow = [&](int y, PieceColor color) {
-    this->board[y][0] = std::make_unique<Rook>(color);
-    this->board[y][1] = std::make_unique<Knight>(color);
-    this->board[y][2] = std::make_unique<Bishop>(color);
-
-    this->board[y][3] = std::make_unique<Queen>(color);
-    this->board[y][4] = std::make_unique<King>(color);
-
-    this->board[y][5] = std::make_unique<Bishop>(color);
-    this->board[y][6] = std::make_unique<Knight>(color);
-    this->board[y][7] = std::make_unique<Rook>(color);
-  };
-
-  setupMajorRow(0, PieceColor::Black);
-  setupMajorRow(7, PieceColor::White);
-}
-
 void Board::movePiece(Coords from, Coords to) {
 
   board[to.y][to.x].reset();

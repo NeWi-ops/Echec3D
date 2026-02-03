@@ -2,12 +2,12 @@
 #include <sstream>
 #include <vector>
 
-#include "./../model/Pieces/bishop.hpp"
-#include "./../model/Pieces/king.hpp"
-#include "./../model/Pieces/knight.hpp"
-#include "./../model/Pieces/pawn.hpp"
-#include "./../model/Pieces/queen.hpp"
-#include "./../model/Pieces/rook.hpp"
+#include "./../Pieces/bishop.hpp"
+#include "./../Pieces/king.hpp"
+#include "./../Pieces/knight.hpp"
+#include "./../Pieces/pawn.hpp"
+#include "./../Pieces/queen.hpp"
+#include "./../Pieces/rook.hpp"
 
 std::string FenConverter::save(const Game &game) {
   std::stringstream ss;

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "./../types/ColorEnum.hpp"
-#include "./../types/GameStateEnum.hpp"
+#include "./Types/ColorEnum.hpp"
+#include "./Types/GameStateEnum.hpp"
 #include "Board/board.hpp"
 #include <array>
 #include <iostream>
