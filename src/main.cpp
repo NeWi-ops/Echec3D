@@ -36,12 +36,10 @@ int main() {
                  0x0020, 0x00FF, 0x2000, 0x27FF, 0,
              };
 
-             const char *fontPath =
-                 "./ressources/fonts/DejaVuSans.ttf";
+             const char *fontPath = "./ressources/fonts/DejaVuSans.ttf";
              std::ifstream fileCheck(fontPath);
 
              if (fileCheck.good()) {
-
                io.Fonts->AddFontFromFileTTF(fontPath, 24.0f, nullptr, ranges);
                std::cout << "SUCCES : Police chargée depuis " << fontPath
                          << std::endl;
@@ -68,14 +66,29 @@ int main() {
            [&]() {
              float dt = ImGui::GetIO().DeltaTime;
 
-             glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-
-             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-             if (scene3D && game) {
-               scene3D->draw(*game, dt);
+             // --- 1. GESTION DU CLIC 3D (RAYCASTING) ---
+             // On vérifie si l'utilisateur a cliqué sur le plateau 3D
+             if (scene3D && game && renderer) {
+               auto clickedSquare = scene3D->getClickedSquare();
+               
+               if (clickedSquare.has_value()) {
+                 // Si clic détecté, on le traite exactement comme un clic UI
+                 renderer->handleSquareClick(clickedSquare.value(), *game, scene3D.get());
+               }
              }
 
+             // --- 2. NETTOYAGE ---
+             glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+             // --- 3. RENDU 3D ---
+             if (scene3D && game) {
+               // On passe maintenant la sélection et les coups possibles pour colorier les cases 3D
+               // renderer->selectedCase et renderer->possibleMoves sont maintenant publics grâce à l'étape précédente
+               scene3D->draw(*game, dt, renderer->selectedCase, renderer->possibleMoves);
+             }
+
+             // --- 4. RENDU UI (2D) ---
              if (game && renderer) {
                renderer->render(*game, scene3D.get());
              }

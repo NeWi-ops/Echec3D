@@ -10,10 +10,13 @@ public:
   ~Scene3D();
 
   void init();
-  void draw(const Game &game, float deltaTime);
+  void draw(const Game &game, float deltaTime,  std::optional<Coords> selectedCase, const std::vector<Coords>& possibleMoves);
   void triggerMoveAnimation(Coords from, Coords to, PieceType type,
                             PieceColor color);
+  
+  std::optional<Coords> getClickedSquare();
 
+                            
 private:
   unsigned int shaderProgram;
   unsigned int VAO, VBO;
@@ -33,4 +36,10 @@ private:
   glm::vec3 camTarget = glm::vec3(3.5f, 0.0f, 3.5f);
 
   void updateCameraInput();
+
+  glm::mat4 lastProjection;
+    glm::mat4 lastView;
+    
+    bool isClicking = false;
 };
+

@@ -74,8 +74,6 @@ void GameRenderer::drawBoard(Game &game, Scene3D *scene3D) {
   ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
   ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(0, 0));
 
-  bool triggerPromotionPopup = false;
-
   if (ImGui::BeginTable("Grid", 8,
                         ImGuiTableFlags_NoPadInnerX |
                             ImGuiTableFlags_NoPadOuterX)) {
@@ -94,6 +92,7 @@ void GameRenderer::drawBoard(Game &game, Scene3D *scene3D) {
         ImVec4 bgCol = isDark ? ImVec4(0.45f, 0.45f, 0.45f, 1.0f)
                               : ImVec4(0.8f, 0.8f, 0.8f, 1.0f);
 
+        // Gestion des couleurs (Echec, Sélection, Coups possibles)
         if (p && p->getType() == PieceType::King &&
             p->getColor() == currentTurn) {
           if (state == GameState::Check || state == GameState::Checkmate)
@@ -130,68 +129,12 @@ void GameRenderer::drawBoard(Game &game, Scene3D *scene3D) {
           ImGui::PushFont(chessFont);
         ImGui::SetWindowFontScale(fontScale);
 
+        // --- C'est ici que ça change ! ---
+        // Au lieu du gros bloc IF, on appelle la fonction handleSquareClick
         if (ImGui::Button(label.c_str(), ImVec2(cellSize, cellSize))) {
-
-          if (!selectedCase.has_value()) {
-            if (p && p->getColor() == currentTurn) {
-              selectedCase = pos;
-              possibleMoves.clear();
-              auto moves = Arbiter::getLegalMoves(board, pos);
-              for (const auto &m : moves)
-                possibleMoves.push_back(m.to);
-            }
-          } else {
-            Coords start = selectedCase.value();
-            if (start == pos) {
-              selectedCase = std::nullopt;
-              possibleMoves.clear();
-            } else {
-
-              PieceType type = board.getPiece(start)->getType();
-              Move moveAttempt(start, pos, type);
-
-              bool isPawn = (type == PieceType::Pawn);
-              bool isLastRow = (pos.y == 0 || pos.y == 7);
-
-              if (isPawn && isLastRow) {
-
-                moveAttempt.isPromotion = true;
-                pendingPromotionMove = moveAttempt;
-                shouldOpenPromotion = true;
-
-                triggerPromotionPopup = true;
-              } else {
-
-                if (game.playMove(moveAttempt)) {
-
-                  if (scene3D) {
-                    PieceColor movedColor =
-                        (game.getCurrentTurn() == PieceColor::White)
-                            ? PieceColor::Black
-                            : PieceColor::White;
-                    scene3D->triggerMoveAnimation(
-                        moveAttempt.from, moveAttempt.to,
-                        moveAttempt.movingPiece, movedColor);
-                  }
-                  selectedCase = std::nullopt;
-                  possibleMoves.clear();
-                } else {
-
-                  if (p && p->getColor() == currentTurn) {
-                    selectedCase = pos;
-                    possibleMoves.clear();
-                    auto moves = Arbiter::getLegalMoves(board, pos);
-                    for (const auto &m : moves)
-                      possibleMoves.push_back(m.to);
-                  } else {
-                    selectedCase = std::nullopt;
-                    possibleMoves.clear();
-                  }
-                }
-              }
-            }
-          }
+           handleSquareClick(pos, game, scene3D);
         }
+        // ---------------------------------
 
         ImGui::SetWindowFontScale(1.0f);
         if (chessFont)
@@ -206,13 +149,8 @@ void GameRenderer::drawBoard(Game &game, Scene3D *scene3D) {
 
   if (ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows) &&
       ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
-
     selectedCase = std::nullopt;
     possibleMoves.clear();
-  }
-
-  if (triggerPromotionPopup) {
-    ImGui::OpenPopup("Choix Promotion");
   }
 }
 
@@ -257,6 +195,7 @@ void GameRenderer::drawPromotionPopup(Game &game) {
           finalMove.promoteTo = type;
 
           if (game.playMove(finalMove)) {
+            // Optionnel : Ajouter anim de promotion ici si tu veux
           }
 
           selectedCase = std::nullopt;
@@ -278,11 +217,8 @@ void GameRenderer::drawPromotionPopup(Game &game) {
 }
 
 std::string GameRenderer::coordToString(Coords c) {
-
   char col = 'a' + c.x;
-
   int row = 8 - c.y;
-
   std::stringstream ss;
   ss << col << row;
   return ss.str();
@@ -290,13 +226,9 @@ std::string GameRenderer::coordToString(Coords c) {
 
 std::string GameRenderer::moveToString(const Move &m) {
   std::stringstream ss;
-
   ss << coordToString(m.from);
-
   ss << (m.capturedPiece.has_value() ? "x" : "-");
-
   ss << coordToString(m.to);
-
   if (m.isPromotion && m.promoteTo.has_value()) {
     switch (m.promoteTo.value()) {
     case PieceType::Queen:
@@ -315,12 +247,10 @@ std::string GameRenderer::moveToString(const Move &m) {
       break;
     }
   }
-
   return ss.str();
 }
 
 void GameRenderer::drawHistoryWindow(Game &game) {
-
   const auto &history = game.getHistory();
 
   if (ImGui::BeginTable("HistoryTable", 3,
@@ -334,21 +264,15 @@ void GameRenderer::drawHistoryWindow(Game &game) {
 
     int turnCount = 1;
     for (size_t i = 0; i < history.size(); ++i) {
-
       if (i % 2 == 0) {
         ImGui::TableNextRow();
-
         ImGui::TableSetColumnIndex(0);
         ImGui::Text("%d.", turnCount);
-
         ImGui::TableSetColumnIndex(1);
         ImGui::Text("%s", moveToString(history[i]).c_str());
-      }
-
-      else {
+      } else {
         ImGui::TableSetColumnIndex(2);
         ImGui::Text("%s", moveToString(history[i]).c_str());
-
         turnCount++;
       }
     }
@@ -356,7 +280,6 @@ void GameRenderer::drawHistoryWindow(Game &game) {
     if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
       ImGui::SetScrollHereY(1.0f);
     }
-
     ImGui::EndTable();
   }
 }
@@ -372,7 +295,6 @@ void GameRenderer::drawControlPanel(Game &game, Scene3D *scene3D) {
   }
 
   if (ImGui::Button("Faire jouer l'IA", ImVec2(-1, 30))) {
-
     Move bestMove =
         SimpleAI::getBestMove(game.getBoard(), game.getCurrentTurn(), 3);
 
@@ -388,20 +310,15 @@ void GameRenderer::drawControlPanel(Game &game, Scene3D *scene3D) {
 
     if (success) {
       std::cout << "UI: Coup accepté et joué !" << std::endl;
-
       if (scene3D) {
-
         PieceColor movedColor = (game.getCurrentTurn() == PieceColor::White)
                                     ? PieceColor::Black
                                     : PieceColor::White;
-
         scene3D->triggerMoveAnimation(bestMove.from, bestMove.to,
                                       bestMove.movingPiece, movedColor);
       }
-
       selectedCase = std::nullopt;
       possibleMoves.clear();
-
     } else {
       std::cout << "UI: ERREUR - Le coup a été REJETÉ par game.playMove()"
                 << std::endl;
@@ -417,7 +334,6 @@ void GameRenderer::drawControlPanel(Game &game, Scene3D *scene3D) {
   ImGui::Separator();
 
   if (ImGui::Button("Copier FEN", ImVec2(-1, 30))) {
-
     std::string fen = FenConverter::save(game);
     ImGui::SetClipboardText(fen.c_str());
   }
@@ -428,9 +344,7 @@ void GameRenderer::drawControlPanel(Game &game, Scene3D *scene3D) {
   if (ImGui::Button("Charger FEN", ImVec2(-1, 30))) {
     std::string fenStr(fenBuffer);
     if (!fenStr.empty()) {
-
       FenConverter::load(game, fenStr);
-
       selectedCase = std::nullopt;
       possibleMoves.clear();
     }
@@ -442,7 +356,6 @@ void GameRenderer::drawStatusWindow(Game &game) {
   PieceColor turn = game.getCurrentTurn();
 
   float windowWidth = ImGui::GetContentRegionAvail().x;
-  float textWidth;
 
   std::string tourStr =
       (turn == PieceColor::White) ? "Tour : BLANCS" : "Tour : NOIRS";
@@ -478,5 +391,75 @@ void GameRenderer::drawStatusWindow(Game &game) {
     textSize = ImGui::CalcTextSize(txt.c_str());
     ImGui::SetCursorPosX((windowWidth - textSize.x) * 0.5f);
     ImGui::TextColored(ImVec4(1, 1, 0, 1), "%s", txt.c_str());
+  }
+}
+
+// --- NOUVELLE FONCTION CENTRALISÉE POUR LE CLIC (UI & 3D) ---
+void GameRenderer::handleSquareClick(Coords pos, Game &game, Scene3D *scene3D) {
+  const Board &board = game.getBoard();
+  PieceColor currentTurn = game.getCurrentTurn();
+
+  if (!selectedCase.has_value()) {
+    // Premier clic : sélection
+    const Piece *p = board.getPiece(pos);
+    if (p && p->getColor() == currentTurn) {
+      selectedCase = pos;
+      possibleMoves.clear();
+      auto moves = Arbiter::getLegalMoves(board, pos);
+      for (const auto &m : moves)
+        possibleMoves.push_back(m.to);
+    }
+  } else {
+    // Deuxième clic : action
+    Coords start = selectedCase.value();
+    if (start == pos) {
+      // Déselection si on reclique sur la même case
+      selectedCase = std::nullopt;
+      possibleMoves.clear();
+    } else {
+      const Piece *pStart = board.getPiece(start);
+      if (!pStart) return;
+
+      PieceType type = pStart->getType();
+      Move moveAttempt(start, pos, type);
+
+      bool isPawn = (type == PieceType::Pawn);
+      bool isLastRow = (pos.y == 0 || pos.y == 7);
+
+      if (isPawn && isLastRow) {
+        // Promotion
+        pendingPromotionMove = moveAttempt;
+        pendingPromotionMove->isPromotion = true;
+        shouldOpenPromotion = true;
+        // On ouvre la popup immédiatement (fonctionne pour UI et 3D)
+        ImGui::OpenPopup("Choix Promotion");
+      } else {
+        // Coup normal
+        if (game.playMove(moveAttempt)) {
+          if (scene3D) {
+            PieceColor movedColor = (game.getCurrentTurn() == PieceColor::White)
+                                        ? PieceColor::Black
+                                        : PieceColor::White;
+            scene3D->triggerMoveAnimation(moveAttempt.from, moveAttempt.to,
+                                          moveAttempt.movingPiece, movedColor);
+          }
+          selectedCase = std::nullopt;
+          possibleMoves.clear();
+        } else {
+          // Coup invalide : est-ce qu'on clique sur une autre pièce à nous ?
+          const Piece *pNew = board.getPiece(pos);
+          if (pNew && pNew->getColor() == currentTurn) {
+            selectedCase = pos;
+            possibleMoves.clear();
+            auto moves = Arbiter::getLegalMoves(board, pos);
+            for (const auto &m : moves)
+              possibleMoves.push_back(m.to);
+          } else {
+            selectedCase = std::nullopt;
+            possibleMoves.clear();
+          }
+        }
+      }
+    }
   }
 }

@@ -1,9 +1,11 @@
 #include "Scene3D.hpp"
-#include <fstream> // <--- Pour lire les fichiers
+#include <algorithm>
+#include <cmath>
+#include <fstream> 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
-#include <sstream> // <--- Pour lire le texte
+#include <sstream> 
 #include <vector>
 
 std::string loadShaderFile(const char *filename) {
@@ -184,7 +186,7 @@ void Scene3D::init() {
   glBindVertexArray(0);
 }
 
-void Scene3D::draw(const Game &game, float deltaTime) {
+void Scene3D::draw(const Game &game, float deltaTime, std::optional<Coords> selectedCase, const std::vector<Coords>& possibleMoves) {
 
   // 1. SETUP DE BASE
   glEnable(GL_DEPTH_TEST);
@@ -227,6 +229,9 @@ void Scene3D::draw(const Game &game, float deltaTime) {
       glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
   glm::mat4 view = glm::lookAt(camPos, camTarget, glm::vec3(0.0f, 1.0f, 0.0f));
 
+  lastProjection = projection; 
+  lastView = view;
+
   // 5. RÉCUPÉRATION DES UNIFORMS (Nouveaux noms !)
   int modelLoc = glGetUniformLocation(shaderProgram, "model");
   int viewLoc = glGetUniformLocation(shaderProgram, "view");
@@ -249,20 +254,23 @@ void Scene3D::draw(const Game &game, float deltaTime) {
   // 7. BOUCLE D'AFFICHAGE (Plateau + Pièces)
   for (int y = 0; y < 8; y++) {
     for (int x = 0; x < 8; x++) {
+      Coords currentPos{x, y};
 
       // --- A. LE SOL (CASE) ---
       glm::mat4 model = glm::mat4(1.0f);
       model = glm::translate(model, glm::vec3(x, 0.0f, y));
       model = glm::scale(model, glm::vec3(0.95f, 0.1f, 0.95f));
-
-      // On envoie juste la matrice Model de l'objet
       glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
-      if ((x + y) % 2 != 0)
-        glUniform3f(uColorLoc, 0.3f, 0.3f, 0.3f); // Noir
-      else
-        glUniform3f(uColorLoc, 0.9f, 0.9f, 0.9f); // Blanc
-
+      // Gestion des couleurs avec Feedback Visuel
+      if (selectedCase.has_value() && selectedCase.value() == currentPos) {
+          glUniform3f(uColorLoc, 0.2f, 0.8f, 0.2f); // Vert (Sélection)
+      } else if (std::find(possibleMoves.begin(), possibleMoves.end(), currentPos) != possibleMoves.end()) {
+          glUniform3f(uColorLoc, 0.4f, 0.7f, 1.0f); // Bleu clair (Coup possible)
+      } else {
+          if ((x + y) % 2 != 0) glUniform3f(uColorLoc, 0.3f, 0.3f, 0.3f);
+          else glUniform3f(uColorLoc, 0.9f, 0.9f, 0.9f);
+      }
       glDrawArrays(GL_TRIANGLES, 0, 36);
 
       // --- B. LA PIÈCE (STATIQUE) ---
@@ -334,4 +342,57 @@ void Scene3D::triggerMoveAnimation(Coords from, Coords to, PieceType type,
   animPieceType = type;
   animPieceColor = color;
   animTargetSquare = to;
+}
+
+std::optional<Coords> Scene3D::getClickedSquare() {
+    ImGuiIO& io = ImGui::GetIO();
+    
+    // Ne pas cliquer si la souris est sur une fenêtre ImGui (comme ton historique)
+    if (io.WantCaptureMouse || !ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+        return std::nullopt;
+    }
+
+    // 1. Coordonnées de la souris (0 à 1)
+    float mouseX = io.MousePos.x;
+    float mouseY = io.MousePos.y;
+    float width = io.DisplaySize.x;
+    float height = io.DisplaySize.y;
+
+    // 2. Conversion en NDC (-1 à 1)
+    float x = (2.0f * mouseX) / width - 1.0f;
+    float y = 1.0f - (2.0f * mouseY) / height; // Inversé en OpenGL
+
+    // 3. Création du rayon en espace monde
+    glm::mat4 invVP = glm::inverse(lastProjection * lastView);
+    glm::vec4 screenPosNear(x, y, -1.0f, 1.0f);
+    glm::vec4 screenPosFar(x, y, 1.0f, 1.0f);
+
+    glm::vec4 worldPosNear = invVP * screenPosNear;
+    glm::vec4 worldPosFar = invVP * screenPosFar;
+
+    worldPosNear /= worldPosNear.w;
+    worldPosFar /= worldPosFar.w;
+
+    glm::vec3 rayOrigin = glm::vec3(worldPosNear);
+    glm::vec3 rayDir = glm::normalize(glm::vec3(worldPosFar) - rayOrigin);
+
+    // 4. Intersection Rayon / Plan (y = 0)
+    // Formule : t = -origin.y / dir.y
+    if (std::abs(rayDir.y) < 0.0001f) return std::nullopt; // Parallèle au plateau
+
+    float t = -rayOrigin.y / rayDir.y;
+    if (t < 0) return std::nullopt; // Le plateau est derrière la caméra
+
+    glm::vec3 hitPoint = rayOrigin + t * rayDir;
+
+    // 5. Conversion en coordonnées de plateau (0 à 7)
+    // On arrondit car tes cases sont centrées sur des entiers (x, 0, y)
+    int boardX = std::floor(hitPoint.x + 0.5f);
+    int boardY = std::floor(hitPoint.z + 0.5f);
+
+    if (boardX >= 0 && boardX < 8 && boardY >= 0 && boardY < 8) {
+        return Coords{boardX, boardY};
+    }
+
+    return std::nullopt;
 }

@@ -46,6 +46,7 @@ static void set_glfw_callbacks(GLFWwindow* window, Callbacks& callbacks)
 void loop(const char* window_name, Callbacks callbacks)
 {
     GLFWwindow* const window = ImGuiWrapper::create_window(window_name);
+    
     set_glfw_callbacks(window, callbacks);
     callbacks.init();
 
