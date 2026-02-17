@@ -366,7 +366,7 @@ void GameRenderer::drawControlPanel(Game &game, Scene3D *scene3D) {
   // }
 
   // --- 1. LE BOUTON DÉCLENCHEUR ---
-  if (ImGui::Button("Nouvelle Partie")) {
+  if (ImGui::Button("Nouvelle Partie", ImVec2(-1, 30))) {
     ImGui::OpenPopup("Choix du Mode"); // Ouvre la popup par son ID
   }
 
