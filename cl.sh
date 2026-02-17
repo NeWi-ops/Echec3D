@@ -1,1 +1,1 @@
-make -C build && cd bin && ./ImGuiTemplate && cd ..
+make && cd ./bin && ./ImGuiTemplate && cd ../..

@@ -10,11 +10,15 @@
 #include "quick_imgui/quick_imgui.hpp"
 
 #include "./customs/paladin.hpp"
+#include "./customs/siegeTower.hpp"
+
 #include "./model/Factory/factory.hpp"
 
 #include "model/game.hpp"
 #include "view/Scene3D.hpp"
 #include "view/gameRenderer.hpp"
+
+void initGame(Game *game);
 
 int main() {
   std::srand(std::time(nullptr));
@@ -23,9 +27,7 @@ int main() {
   std::unique_ptr<GameRenderer> renderer;
   std::unique_ptr<Scene3D> scene3D;
 
-  // GameRegistry.cpp
-  PieceFactory::registerPiece(
-      "Paladin", [](PieceColor c) { return std::make_unique<Paladin>(c); });
+  initGame(game.get());
 
   quick_imgui::loop(
       "Jeu d'Echecs",
@@ -88,4 +90,23 @@ int main() {
            }});
 
   return 0;
+}
+
+void initGame(Game *game) {
+  // GameRegistry.cpp
+  PieceFactory::registerPiece(
+      "Paladin", [](PieceColor c) { return std::make_unique<Paladin>(c); });
+
+  for (const auto &scen : Paladin::getAddonScenarios()) {
+    ScenarioRegistry::instance().add(scen.name, scen.desc, scen.fen);
+  }
+
+  PieceFactory::registerPiece("SiegeTower", [](PieceColor c) {
+    return std::make_unique<SiegeTower>(c);
+  });
+
+  // Enregistrement des scénarios (Optionnel)
+  for (const auto &s : SiegeTower::getAddonScenarios()) {
+    ScenarioRegistry::instance().add(s.name, s.desc, s.fen);
+  }
 }
