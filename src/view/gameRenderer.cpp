@@ -76,6 +76,7 @@ void GameRenderer::drawBoard(Game &game, Scene3D *scene3D) {
   ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
   ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(0, 0));
 
+  // Flag local pour savoir si on doit ouvrir la popup À LA FIN de la fonction
   bool triggerPromotionPopup = false;
 
   if (ImGui::BeginTable("Grid", 8,
@@ -92,6 +93,7 @@ void GameRenderer::drawBoard(Game &game, Scene3D *scene3D) {
         ImGui::PushID(squareId);
 
         const Piece *p = board.getPiece(pos);
+        // ... [Calcul des couleurs inchangé] ...
         bool isDark = (x + y) % 2 != 0;
         ImVec4 bgCol = isDark ? ImVec4(0.45f, 0.45f, 0.45f, 1.0f)
                               : ImVec4(0.8f, 0.8f, 0.8f, 1.0f);
@@ -132,9 +134,11 @@ void GameRenderer::drawBoard(Game &game, Scene3D *scene3D) {
           ImGui::PushFont(chessFont);
         ImGui::SetWindowFontScale(fontScale);
 
+        // --- GESTION DU CLIC ---
         if (ImGui::Button(label.c_str(), ImVec2(cellSize, cellSize))) {
 
           if (!selectedCase.has_value()) {
+            // SÉLECTION
             if (p && p->getColor() == currentTurn) {
               selectedCase = pos;
               possibleMoves.clear();
@@ -143,29 +147,32 @@ void GameRenderer::drawBoard(Game &game, Scene3D *scene3D) {
                 possibleMoves.push_back(m.to);
             }
           } else {
+            // DÉPLACEMENT
             Coords start = selectedCase.value();
             if (start == pos) {
               selectedCase = std::nullopt;
               possibleMoves.clear();
             } else {
-
               PieceType type = board.getPiece(start)->getType();
               Move moveAttempt(start, pos, type);
 
               bool isPawn = (type == PieceType::Pawn);
+              // Vérification ligne 0 ou 7 pour promotion
               bool isLastRow = (pos.y == 0 || pos.y == 7);
 
+              // --- CORRECTION CLÉ ICI ---
               if (isPawn && isLastRow) {
-
+                // On détecte la promotion : on ne joue PAS le coup, on prépare
+                // la popup
                 moveAttempt.isPromotion = true;
                 pendingPromotionMove = moveAttempt;
                 shouldOpenPromotion = true;
 
+                // On active le trigger pour ouvrir la popup APRES la boucle
                 triggerPromotionPopup = true;
               } else {
-
+                // Coup normal
                 if (game.playMove(moveAttempt)) {
-
                   if (scene3D) {
                     PieceColor movedColor =
                         (game.getCurrentTurn() == PieceColor::White)
@@ -178,7 +185,8 @@ void GameRenderer::drawBoard(Game &game, Scene3D *scene3D) {
                   selectedCase = std::nullopt;
                   possibleMoves.clear();
                 } else {
-
+                  // Si coup invalide mais case cliquée contient notre pièce, on
+                  // change la sélection
                   if (p && p->getColor() == currentTurn) {
                     selectedCase = pos;
                     possibleMoves.clear();
@@ -206,13 +214,14 @@ void GameRenderer::drawBoard(Game &game, Scene3D *scene3D) {
   }
   ImGui::PopStyleVar(2);
 
+  // Clic droit pour annuler
   if (ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows) &&
       ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
-
     selectedCase = std::nullopt;
     possibleMoves.clear();
   }
 
+  // --- OUVERTURE DE LA POPUP (HORS DU TABLEAU) ---
   if (triggerPromotionPopup) {
     ImGui::OpenPopup("Choix Promotion");
   }
@@ -254,8 +263,12 @@ void GameRenderer::drawPromotionPopup(Game &game) {
   ImVec2 center = ImGui::GetMainViewport()->GetCenter();
   ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 
-  if (ImGui::BeginPopupModal("Choix Promotion", &shouldOpenPromotion,
+  // IMPORTANT : On passe 'nullptr' au lieu de '&shouldOpenPromotion'.
+  // Cela évite que la popup se ferme toute seule si le booléen est mal
+  // synchronisé.
+  if (ImGui::BeginPopupModal("Choix Promotion", nullptr,
                              ImGuiWindowFlags_AlwaysAutoResize)) {
+
     ImGui::Text("En quoi voulez-vous transformer votre pion ?");
     ImGui::Separator();
 
@@ -264,17 +277,19 @@ void GameRenderer::drawPromotionPopup(Game &game) {
 
         if (pendingPromotionMove.has_value()) {
           Move finalMove = pendingPromotionMove.value();
-
           finalMove.promoteTo = type;
 
           if (game.playMove(finalMove)) {
+            // Coup joué avec succès
           }
 
+          // Nettoyage complet
           selectedCase = std::nullopt;
           possibleMoves.clear();
           pendingPromotionMove = std::nullopt;
           shouldOpenPromotion = false;
-          ImGui::CloseCurrentPopup();
+
+          ImGui::CloseCurrentPopup(); // On ferme manuellement
         }
       }
     };
@@ -284,21 +299,18 @@ void GameRenderer::drawPromotionPopup(Game &game) {
     selectPiece(PieceType::Bishop, "Fou");
     selectPiece(PieceType::Knight, "Cavalier");
 
+    ImGui::Separator();
+
+    // Bouton Annuler explicite
+    if (ImGui::Button("Annuler", ImVec2(120, 0))) {
+      pendingPromotionMove = std::nullopt;
+      shouldOpenPromotion = false;
+      ImGui::CloseCurrentPopup();
+    }
+
     ImGui::EndPopup();
   }
 }
-
-std::string GameRenderer::coordToString(Coords c) {
-
-  char col = 'a' + c.x;
-
-  int row = 8 - c.y;
-
-  std::stringstream ss;
-  ss << col << row;
-  return ss.str();
-}
-
 std::string GameRenderer::moveToString(const Move &m) {
   std::stringstream ss;
 
@@ -561,4 +573,13 @@ void GameRenderer::drawStatusWindow(Game &game) {
     ImGui::SetCursorPosX((windowWidth - textSize.x) * 0.5f);
     ImGui::TextColored(ImVec4(1, 1, 0, 1), "%s", txt.c_str());
   }
+}
+
+std::string GameRenderer::coordToString(Coords c) {
+  char col = 'a' + c.x;
+  int row = 8 - c.y;
+
+  std::stringstream ss;
+  ss << col << row;
+  return ss.str();
 }
