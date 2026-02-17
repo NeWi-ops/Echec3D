@@ -53,4 +53,6 @@ public:
   std::unique_ptr<Piece> clone() const override {
     return std::make_unique<Bishop>(*this);
   }
+
+  std::string getFenSymbol() const override { return "b"; }
 };

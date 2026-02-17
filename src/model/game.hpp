@@ -41,4 +41,6 @@ public:
     m_currentTurn = Piece::opposite(m_currentTurn);
     switchTurn();
   }
+
+  void newGame(std::string fen);
 };

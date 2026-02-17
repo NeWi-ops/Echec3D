@@ -25,6 +25,8 @@ public:
     return (color == PieceColor::White) ? PieceColor::Black : PieceColor::White;
   }
 
+  virtual std::string getFenSymbol() const = 0;
+
 protected:
   Piece(PieceColor color, PieceType type) : m_color(color), m_type(type) {}
 

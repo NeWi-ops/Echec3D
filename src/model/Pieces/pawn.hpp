@@ -52,4 +52,6 @@ public:
   std::unique_ptr<Piece> clone() const override {
     return std::make_unique<Pawn>(*this);
   }
+
+  std::string getFenSymbol() const override { return "p"; }
 };

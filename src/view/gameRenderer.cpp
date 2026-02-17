@@ -1,6 +1,8 @@
 #include "gameRenderer.hpp"
 #include "./../ai/SimpleAI.hpp"
+#include "./../customs/customsPiece.hpp"
 #include "./../model/Fen/FenConverter.hpp"
+#include "./../utils/scenarioRegister.hpp"
 #include "./Scene3D.hpp"
 #include <algorithm>
 #include <iostream>
@@ -158,6 +160,16 @@ std::string GameRenderer::getPieceLabel(const Piece *p) {
   if (!p)
     return "";
 
+  if (p->getType() == PieceType::Custom) {
+    // On convertit le pointeur générique en pointeur spécifique
+    const auto *customP = dynamic_cast<const CustomPiece *>(p);
+
+    if (customP) {
+      return customP->getIcon(); // On a accès à la méthode !
+    }
+    return "?"; // Sécurité si le cast échoue
+  }
+
   switch (p->getType()) {
   case PieceType::Pawn:
     return "♟";
@@ -171,9 +183,8 @@ std::string GameRenderer::getPieceLabel(const Piece *p) {
     return "♛";
   case PieceType::King:
     return "♚";
-  default:
-    return "?";
   }
+  return "?";
 }
 
 void GameRenderer::drawPromotionPopup(Game &game) {
@@ -325,11 +336,82 @@ void GameRenderer::drawControlPanel(Game &game, Scene3D *scene3D) {
     }
   }
 
-  if (ImGui::Button("Recommencer la partie", ImVec2(-1, 30))) {
-    game.reset();
-    selectedCase = std::nullopt;
-    possibleMoves.clear();
+  // if (ImGui::Button("Recommencer la partie", ImVec2(-1, 30))) {
+  //   game.reset();
+  //   game.newGame("rnbqkbnr/"
+  //                "(Paladin:B)(Paladin:B)(Paladin:B)(Paladin:B)(Paladin:B)("
+  //                "Paladin:B)(Paladin:B)(Paladin:B)/8/8/8/8/"
+  //                "(Paladin:W)(Paladin:W)(Paladin:W)(Paladin:W)(Paladin:W)("
+  //                "Paladin:W)(Paladin:W)(Paladin:W)/RNBQKBNR w KQkq - 0 1");
+  //   selectedCase = std::nullopt;
+  //   possibleMoves.clear();
+  // }
+
+  // --- 1. LE BOUTON DÉCLENCHEUR ---
+  if (ImGui::Button("Nouvelle Partie")) {
+    ImGui::OpenPopup("Choix du Mode"); // Ouvre la popup par son ID
   }
+
+  // --- 2. LA POPUP MODALE ---
+  // "AlwaysAutoResize" permet à la fenêtre de s'adapter au contenu
+  bool open = true;
+  if (ImGui::BeginPopupModal("Choix du Mode", &open,
+                             ImGuiWindowFlags_AlwaysAutoResize)) {
+
+    ImGui::Text("Choisissez une configuration de depart :");
+    ImGui::Separator();
+
+    // On affiche le nom en gras
+    ImGui::PushStyleColor(ImGuiCol_Text,
+                          ImVec4(0.4f, 0.8f, 1.0f, 1.0f)); // Vert clair
+    if (ImGui::Button("Default", ImVec2(200, 0))) {        // Bouton large
+
+      // ACTION : Charger le FEN et fermer la popup
+      game.newGame("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+      ImGui::CloseCurrentPopup();
+    }
+    ImGui::PopStyleColor();
+
+    // On affiche la description à côté ou en dessous
+    ImGui::SameLine();
+    ImGui::TextDisabled("(?)");
+    if (ImGui::IsItemHovered()) {
+      ImGui::SetTooltip("%s", "Jeu de base");
+    }
+
+    // On boucle sur tous les presets définis plus haut
+    for (const auto &preset : ScenarioRegistry::instance().getAll()) {
+
+      // On affiche le nom en gras
+      ImGui::PushStyleColor(ImGuiCol_Text,
+                            ImVec4(0.4f, 1.0f, 0.4f, 1.0f));    // Vert clair
+      if (ImGui::Button(preset.name.c_str(), ImVec2(200, 0))) { // Bouton large
+
+        // ACTION : Charger le FEN et fermer la popup
+        game.newGame(preset.fen);
+        ImGui::CloseCurrentPopup();
+      }
+      ImGui::PopStyleColor();
+
+      // On affiche la description à côté ou en dessous
+      ImGui::SameLine();
+      ImGui::TextDisabled("(?)");
+      if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("%s", preset.desc.c_str());
+      }
+    }
+
+    ImGui::Separator();
+
+    // Bouton Annuler
+    if (ImGui::Button("Annuler", ImVec2(120, 0))) {
+      ImGui::CloseCurrentPopup();
+    }
+
+    ImGui::EndPopup();
+  }
+
+  // 333333333333333333333
 
   ImGui::Separator();
 

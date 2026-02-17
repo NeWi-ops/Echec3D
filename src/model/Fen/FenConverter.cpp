@@ -2,12 +2,15 @@
 #include <sstream>
 #include <vector>
 
+#include "./../Factory/factory.hpp"
 #include "./../Pieces/bishop.hpp"
 #include "./../Pieces/king.hpp"
 #include "./../Pieces/knight.hpp"
 #include "./../Pieces/pawn.hpp"
 #include "./../Pieces/queen.hpp"
 #include "./../Pieces/rook.hpp"
+#include <algorithm>
+#include <string>
 
 std::string FenConverter::save(const Game &game) {
   std::stringstream ss;
@@ -24,29 +27,10 @@ std::string FenConverter::save(const Game &game) {
           ss << emptyCount;
           emptyCount = 0;
         }
-        char c = '?';
-        switch (p->getType()) {
-        case PieceType::Pawn:
-          c = 'p';
-          break;
-        case PieceType::Rook:
-          c = 'r';
-          break;
-        case PieceType::Knight:
-          c = 'n';
-          break;
-        case PieceType::Bishop:
-          c = 'b';
-          break;
-        case PieceType::Queen:
-          c = 'q';
-          break;
-        case PieceType::King:
-          c = 'k';
-          break;
-        }
+        std::string c = "?";
+        c = p->getFenSymbol();
         if (p->getColor() == PieceColor::White)
-          c = toupper(c);
+          std::transform(c.begin(), c.end(), c.begin(), ::toupper);
         ss << c;
       }
     }
@@ -70,6 +54,7 @@ void FenConverter::load(Game &game, const std::string &fen) {
   std::string segment;
   std::vector<std::string> parts;
 
+  // Découpage du FEN (Plateau, Tour, Roque, etc.)
   while (std::getline(ss, segment, ' ')) {
     parts.push_back(segment);
   }
@@ -79,43 +64,80 @@ void FenConverter::load(Game &game, const std::string &fen) {
 
   int y = 0;
   int x = 0;
-  for (char c : parts[0]) {
+
+  // On récupère la string du plateau pour pouvoir la parcourir avec un index
+  // 'i' (Nécessaire pour lire plusieurs caractères d'un coup pour le Custom)
+  std::string boardFen = parts[0];
+
+  for (size_t i = 0; i < boardFen.length(); ++i) {
+    char c = boardFen[i];
+
+    // 1. Changement de ligne
     if (c == '/') {
       y++;
       x = 0;
-    } else if (isdigit(c)) {
-      x += (c - '0');
-    } else {
-      PieceColor color = isupper(c) ? PieceColor::White : PieceColor::Black;
-      char typeChar = tolower(c);
-      std::unique_ptr<Piece> newPiece;
+      continue;
+    }
 
-      switch (typeChar) {
-      case 'p':
-        newPiece = std::make_unique<Pawn>(color);
-        break;
-      case 'r':
-        newPiece = std::make_unique<Rook>(color);
-        break;
-      case 'n':
-        newPiece = std::make_unique<Knight>(color);
-        break;
-      case 'b':
-        newPiece = std::make_unique<Bishop>(color);
-        break;
-      case 'q':
-        newPiece = std::make_unique<Queen>(color);
-        break;
-      case 'k':
-        newPiece = std::make_unique<King>(color);
-        break;
+    // 2. Cases vides (Chiffres)
+    if (isdigit(c)) {
+      x += (c - '0');
+      continue;
+    }
+
+    // Préparation des variables pour la Factory
+    std::string key = "";
+    PieceColor color = PieceColor::White;
+
+    // 3. Cas EXTENDED FEN : Détection de la parenthèse '('
+    // Format attendu : (NomDeLaPiece:W) ou (NomDeLaPiece:B)
+    if (c == '(') {
+      i++; // On avance après la parenthèse ouvrante
+
+      std::string content = "";
+      // On lit jusqu'à la parenthèse fermante
+      while (i < boardFen.length() && boardFen[i] != ')') {
+        content += boardFen[i];
+        i++;
       }
-      if (newPiece)
+
+      // On sépare le Nom de la Couleur (séparateur ':')
+      size_t sepPos = content.find(':');
+      if (sepPos != std::string::npos) {
+        key = content.substr(0, sepPos); // ex: "Paladin"
+        std::string colStr = content.substr(sepPos + 1);
+
+        // On détermine la couleur (W/w = Blanc, le reste = Noir)
+        color = (colStr == "W" || colStr == "w") ? PieceColor::White
+                                                 : PieceColor::Black;
+      }
+    }
+    // 4. Cas STANDARD FEN (r, n, b, q, k, p)
+    else {
+      // La clé est la lettre en minuscule ("r", "k"...)
+      key = std::string(1, tolower(c));
+
+      // La couleur est déterminée par la casse (Majuscule = Blanc)
+      color = isupper(c) ? PieceColor::White : PieceColor::Black;
+    }
+
+    // 5. Création via la Factory (Remplaçant le Switch)
+    if (!key.empty()) {
+      auto newPiece = PieceFactory::createPiece(key, color);
+
+      if (newPiece) {
         newBoard->setPieceAt({x, y}, *newPiece);
-      x++;
+      } else {
+        // Optionnel : Log si une pièce du FEN n'est pas connue dans le
+        // GameRegistry std::cerr << "Erreur FEN : Piece '" << key << "' non
+        // enregistree." << std::endl;
+      }
+
+      x++; // On avance sur le plateau
     }
   }
 
+  // Gestion du tour (inchangée)
   PieceColor turn = PieceColor::White;
   if (parts.size() > 1) {
     turn = (parts[1] == "w") ? PieceColor::White : PieceColor::Black;

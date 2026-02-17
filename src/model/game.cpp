@@ -1,5 +1,6 @@
 #include "./game.hpp"
 #include "./Arbiter/arbiter.hpp"
+#include "./Factory/factory.hpp"
 #include "./Fen/FenConverter.hpp"
 #include "./Pieces/bishop.hpp"
 #include "./Pieces/king.hpp"
@@ -12,7 +13,21 @@
 #include <iostream>
 
 Game::Game() {
+  PieceFactory::registerPiece(
+      "r", [](PieceColor c) { return std::make_unique<Rook>(c); });
+  PieceFactory::registerPiece(
+      "n", [](PieceColor c) { return std::make_unique<Knight>(c); });
+  PieceFactory::registerPiece(
+      "b", [](PieceColor c) { return std::make_unique<Bishop>(c); });
+  PieceFactory::registerPiece(
+      "q", [](PieceColor c) { return std::make_unique<Queen>(c); });
+  PieceFactory::registerPiece(
+      "k", [](PieceColor c) { return std::make_unique<King>(c); });
+  PieceFactory::registerPiece(
+      "p", [](PieceColor c) { return std::make_unique<Pawn>(c); });
+
   this->board = std::make_unique<Board>();
+
   FenConverter::load(
       *this, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - - 0 1");
 }
@@ -181,4 +196,13 @@ void Game::undoLastMove() {
     m_state = GameState::Stalemate;
   else
     m_state = GameState::InProgress;
+}
+
+void Game::newGame(std::string fen) {
+  this->board = std::make_unique<Board>();
+  FenConverter::load(*this, fen);
+  this->m_currentTurn = PieceColor::White;
+  this->m_turnCount = 1;
+  this->m_state = GameState::InProgress;
+  this->m_history.clear();
 }
