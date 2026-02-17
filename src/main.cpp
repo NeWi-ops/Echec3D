@@ -75,14 +75,17 @@ int main() {
            [&]() {
              float dt = ImGui::GetIO().DeltaTime;
 
+             bool mouseOnUI = ImGui::GetIO().WantCaptureMouse;
+
              // --- 1. GESTION DU CLIC 3D (RAYCASTING) ---
              // On vérifie si l'utilisateur a cliqué sur le plateau 3D
-             if (scene3D && game && renderer) {
+             if (scene3D && game && renderer && !mouseOnUI) {
                auto clickedSquare = scene3D->getClickedSquare();
-               
+
                if (clickedSquare.has_value()) {
                  // Si clic détecté, on le traite exactement comme un clic UI
-                 renderer->handleSquareClick(clickedSquare.value(), *game, scene3D.get());
+                 renderer->handleSquareClick(clickedSquare.value(), *game,
+                                             scene3D.get());
                }
              }
 
@@ -92,9 +95,12 @@ int main() {
 
              // --- 3. RENDU 3D ---
              if (scene3D && game) {
-               // On passe maintenant la sélection et les coups possibles pour colorier les cases 3D
-               // renderer->selectedCase et renderer->possibleMoves sont maintenant publics grâce à l'étape précédente
-               scene3D->draw(*game, dt, renderer->selectedCase, renderer->possibleMoves);
+               // On passe maintenant la sélection et les coups possibles pour
+               // colorier les cases 3D renderer->selectedCase et
+               // renderer->possibleMoves sont maintenant publics grâce à
+               // l'étape précédente
+               scene3D->draw(*game, dt, renderer->selectedCase,
+                             renderer->possibleMoves);
              }
 
              // --- 4. RENDU UI (2D) ---

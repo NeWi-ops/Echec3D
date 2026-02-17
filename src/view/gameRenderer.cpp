@@ -76,6 +76,10 @@ void GameRenderer::drawBoard(Game &game, Scene3D *scene3D) {
   ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
   ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(0, 0));
 
+  bool triggerPromotionPopup = shouldOpenPromotion;
+
+  // Flag local pour savoir si on doit ouvrir la popup À LA FIN de la fonction
+
   if (ImGui::BeginTable("Grid", 8,
                         ImGuiTableFlags_NoPadInnerX |
                             ImGuiTableFlags_NoPadOuterX)) {
@@ -90,6 +94,7 @@ void GameRenderer::drawBoard(Game &game, Scene3D *scene3D) {
         ImGui::PushID(squareId);
 
         const Piece *p = board.getPiece(pos);
+        // ... [Calcul des couleurs inchangé] ...
         bool isDark = (x + y) % 2 != 0;
         ImVec4 bgCol = isDark ? ImVec4(0.45f, 0.45f, 0.45f, 1.0f)
                               : ImVec4(0.8f, 0.8f, 0.8f, 1.0f);
@@ -134,7 +139,9 @@ void GameRenderer::drawBoard(Game &game, Scene3D *scene3D) {
         // --- C'est ici que ça change ! ---
         // Au lieu du gros bloc IF, on appelle la fonction handleSquareClick
         if (ImGui::Button(label.c_str(), ImVec2(cellSize, cellSize))) {
-           handleSquareClick(pos, game, scene3D);
+          if (handleSquareClick(pos, game, scene3D)) {
+            triggerPromotionPopup = true;
+          }
         }
         // ---------------------------------
 
@@ -149,10 +156,16 @@ void GameRenderer::drawBoard(Game &game, Scene3D *scene3D) {
   }
   ImGui::PopStyleVar(2);
 
+  // Clic droit pour annuler
   if (ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows) &&
       ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
     selectedCase = std::nullopt;
     possibleMoves.clear();
+  }
+
+  // --- OUVERTURE DE LA POPUP (HORS DU TABLEAU) ---
+  if (triggerPromotionPopup) {
+    ImGui::OpenPopup("Choix Promotion");
   }
 }
 
@@ -192,8 +205,12 @@ void GameRenderer::drawPromotionPopup(Game &game) {
   ImVec2 center = ImGui::GetMainViewport()->GetCenter();
   ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 
-  if (ImGui::BeginPopupModal("Choix Promotion", &shouldOpenPromotion,
+  // IMPORTANT : On passe 'nullptr' au lieu de '&shouldOpenPromotion'.
+  // Cela évite que la popup se ferme toute seule si le booléen est mal
+  // synchronisé.
+  if (ImGui::BeginPopupModal("Choix Promotion", nullptr,
                              ImGuiWindowFlags_AlwaysAutoResize)) {
+
     ImGui::Text("En quoi voulez-vous transformer votre pion ?");
     ImGui::Separator();
 
@@ -202,18 +219,19 @@ void GameRenderer::drawPromotionPopup(Game &game) {
 
         if (pendingPromotionMove.has_value()) {
           Move finalMove = pendingPromotionMove.value();
-
           finalMove.promoteTo = type;
 
           if (game.playMove(finalMove)) {
             // Optionnel : Ajouter anim de promotion ici si tu veux
           }
 
+          // Nettoyage complet
           selectedCase = std::nullopt;
           possibleMoves.clear();
           pendingPromotionMove = std::nullopt;
           shouldOpenPromotion = false;
-          ImGui::CloseCurrentPopup();
+
+          ImGui::CloseCurrentPopup(); // On ferme manuellement
         }
       }
     };
@@ -223,18 +241,18 @@ void GameRenderer::drawPromotionPopup(Game &game) {
     selectPiece(PieceType::Bishop, "Fou");
     selectPiece(PieceType::Knight, "Cavalier");
 
+    ImGui::Separator();
+
+    // Bouton Annuler explicite
+    if (ImGui::Button("Annuler", ImVec2(120, 0))) {
+      pendingPromotionMove = std::nullopt;
+      shouldOpenPromotion = false;
+      ImGui::CloseCurrentPopup();
+    }
+
     ImGui::EndPopup();
   }
 }
-
-std::string GameRenderer::coordToString(Coords c) {
-  char col = 'a' + c.x;
-  int row = 8 - c.y;
-  std::stringstream ss;
-  ss << col << row;
-  return ss.str();
-}
-
 std::string GameRenderer::moveToString(const Move &m) {
   std::stringstream ss;
   ss << coordToString(m.from);
@@ -477,12 +495,12 @@ void GameRenderer::drawStatusWindow(Game &game) {
 }
 
 // --- NOUVELLE FONCTION CENTRALISÉE POUR LE CLIC (UI & 3D) ---
-void GameRenderer::handleSquareClick(Coords pos, Game &game, Scene3D *scene3D) {
+bool GameRenderer::handleSquareClick(Coords pos, Game &game, Scene3D *scene3D) {
   const Board &board = game.getBoard();
   PieceColor currentTurn = game.getCurrentTurn();
 
   if (!selectedCase.has_value()) {
-    // Premier clic : sélection
+    // Sélection (inchangé)
     const Piece *p = board.getPiece(pos);
     if (p && p->getColor() == currentTurn) {
       selectedCase = pos;
@@ -491,57 +509,76 @@ void GameRenderer::handleSquareClick(Coords pos, Game &game, Scene3D *scene3D) {
       for (const auto &m : moves)
         possibleMoves.push_back(m.to);
     }
-  } else {
-    // Deuxième clic : action
+    return false; // Pas de promotion sur une sélection
+  }
+
+  else {
+    // Déplacement
     Coords start = selectedCase.value();
     if (start == pos) {
-      // Déselection si on reclique sur la même case
       selectedCase = std::nullopt;
       possibleMoves.clear();
-    } else {
-      const Piece *pStart = board.getPiece(start);
-      if (!pStart) return;
+      return false;
+    }
 
-      PieceType type = pStart->getType();
-      Move moveAttempt(start, pos, type);
+    const Piece *pStart = board.getPiece(start);
+    if (!pStart)
+      return false;
 
-      bool isPawn = (type == PieceType::Pawn);
-      bool isLastRow = (pos.y == 0 || pos.y == 7);
+    PieceType type = pStart->getType();
+    Move moveAttempt(start, pos, type);
 
-      if (isPawn && isLastRow) {
-        // Promotion
-        pendingPromotionMove = moveAttempt;
-        pendingPromotionMove->isPromotion = true;
-        shouldOpenPromotion = true;
-        // On ouvre la popup immédiatement (fonctionne pour UI et 3D)
-        ImGui::OpenPopup("Choix Promotion");
+    bool isPawn = (type == PieceType::Pawn);
+    bool isLastRow = (pos.y == 0 || pos.y == 7);
+
+    // --- C'EST ICI QUE CA CHANGE ---
+    if (isPawn && isLastRow) {
+      // 1. On prépare la promotion
+      pendingPromotionMove = moveAttempt;
+      pendingPromotionMove->isPromotion = true;
+      shouldOpenPromotion = true;
+
+      // 2. IMPORTANT : On n'appelle PAS OpenPopup ici !
+      // On retourne true pour dire au drawBoard de le faire.
+      return true;
+    }
+
+    else {
+      // Coup normal (inchangé)
+      if (game.playMove(moveAttempt)) {
+        if (scene3D) {
+          PieceColor movedColor = (game.getCurrentTurn() == PieceColor::White)
+                                      ? PieceColor::Black
+                                      : PieceColor::White;
+          scene3D->triggerMoveAnimation(moveAttempt.from, moveAttempt.to,
+                                        moveAttempt.movingPiece, movedColor);
+        }
+        selectedCase = std::nullopt;
+        possibleMoves.clear();
       } else {
-        // Coup normal
-        if (game.playMove(moveAttempt)) {
-          if (scene3D) {
-            PieceColor movedColor = (game.getCurrentTurn() == PieceColor::White)
-                                        ? PieceColor::Black
-                                        : PieceColor::White;
-            scene3D->triggerMoveAnimation(moveAttempt.from, moveAttempt.to,
-                                          moveAttempt.movingPiece, movedColor);
-          }
+        // Changement de sélection si clic sur pièce alliée
+        const Piece *pNew = board.getPiece(pos);
+        if (pNew && pNew->getColor() == currentTurn) {
+          selectedCase = pos;
+          possibleMoves.clear();
+          auto moves = Arbiter::getLegalMoves(board, pos);
+          for (const auto &m : moves)
+            possibleMoves.push_back(m.to);
+        } else {
           selectedCase = std::nullopt;
           possibleMoves.clear();
-        } else {
-          // Coup invalide : est-ce qu'on clique sur une autre pièce à nous ?
-          const Piece *pNew = board.getPiece(pos);
-          if (pNew && pNew->getColor() == currentTurn) {
-            selectedCase = pos;
-            possibleMoves.clear();
-            auto moves = Arbiter::getLegalMoves(board, pos);
-            for (const auto &m : moves)
-              possibleMoves.push_back(m.to);
-          } else {
-            selectedCase = std::nullopt;
-            possibleMoves.clear();
-          }
         }
       }
+      return false; // Pas de promotion sur un coup normal
     }
   }
+}
+
+std::string GameRenderer::coordToString(Coords c) {
+  char col = 'a' + c.x;
+  int row = 8 - c.y;
+
+  std::stringstream ss;
+  ss << col << row;
+  return ss.str();
 }

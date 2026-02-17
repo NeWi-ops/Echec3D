@@ -10,8 +10,8 @@ class GameRenderer {
 public:
   void render(Game &game, Scene3D *scene3D);
 
-  void handleSquareClick(Coords pos, Game &game, Scene3D *scene3D);
-  
+  bool handleSquareClick(Coords pos, Game &game, Scene3D *scene3D);
+
   ImFont *chessFont = nullptr;
 
   std::optional<Coords> selectedCase = std::nullopt;
@@ -19,7 +19,6 @@ public:
   std::vector<Coords> possibleMoves;
 
 private:
-
   std::optional<Move> pendingPromotionMove = std::nullopt;
   void drawPromotionPopup(Game &game);
 
@@ -35,6 +34,4 @@ private:
   void drawStatusWindow(Game &game);
 
   bool shouldOpenPromotion = false;
-
-  
 };
