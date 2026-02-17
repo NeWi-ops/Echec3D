@@ -9,6 +9,9 @@
 #include "imgui.h"
 #include "quick_imgui/quick_imgui.hpp"
 
+#include "./customs/paladin.hpp"
+#include "./model/Factory/factory.hpp"
+
 #include "model/game.hpp"
 #include "view/Scene3D.hpp"
 #include "view/gameRenderer.hpp"
@@ -19,6 +22,10 @@ int main() {
   std::unique_ptr<Game> game;
   std::unique_ptr<GameRenderer> renderer;
   std::unique_ptr<Scene3D> scene3D;
+
+  // GameRegistry.cpp
+  PieceFactory::registerPiece(
+      "Paladin", [](PieceColor c) { return std::make_unique<Paladin>(c); });
 
   quick_imgui::loop(
       "Jeu d'Echecs",
@@ -36,8 +43,7 @@ int main() {
                  0x0020, 0x00FF, 0x2000, 0x27FF, 0,
              };
 
-             const char *fontPath =
-                 "./ressources/fonts/DejaVuSans.ttf";
+             const char *fontPath = "./ressources/fonts/DejaVuSans.ttf";
              std::ifstream fileCheck(fontPath);
 
              if (fileCheck.good()) {
