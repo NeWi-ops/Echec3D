@@ -3,6 +3,7 @@
 #include "imgui.h"
 #include <glad/glad.h>
 #include <glm/glm.hpp>
+#include "AssetManager.hpp"
 
 class Scene3D {
 public:
@@ -35,11 +36,22 @@ private:
   float camDistance = 12.0f;
   glm::vec3 camTarget = glm::vec3(3.5f, 0.0f, 3.5f);
 
+  AssetManager assetManager;
+    
+  // Optionnel mais recommandé : stocker les pointeurs vers tes modèles 
+  // pour éviter de les re-demander à l'AssetManager à CHAQUE frame
+  std::shared_ptr<Model3D> modelPawn;
+  std::shared_ptr<Model3D> modelRook;
+  std::shared_ptr<Model3D> modelKnight;
+  std::shared_ptr<Model3D> modelBishop;
+  std::shared_ptr<Model3D> modelQueen;
+  std::shared_ptr<Model3D> modelKing;
+
   void updateCameraInput();
 
   glm::mat4 lastProjection;
-    glm::mat4 lastView;
+  glm::mat4 lastView;
     
-    bool isClicking = false;
+  bool isClicking = false;
 };
 

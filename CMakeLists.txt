@@ -38,7 +38,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     target_include_directories(${PROJECT_NAME} PRIVATE ${GLM_INCLUDE_DIRS})
     
 # Add all the source files
-file(GLOB_RECURSE MY_SOURCES CONFIGURE_DEPENDS src/*)
+file(GLOB_RECURSE MY_SOURCES CONFIGURE_DEPENDS src/*.cpp src/*.hpp)
 target_sources(${PROJECT_NAME} PRIVATE ${MY_SOURCES})
 target_include_directories(${PROJECT_NAME} PRIVATE src)
 

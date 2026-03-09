@@ -7,6 +7,8 @@
 #include <iostream>
 #include <sstream> 
 #include <vector>
+#include "Model3D.hpp"
+#include <filesystem>
 
 std::string loadShaderFile(const char *filename) {
   std::ifstream file;
@@ -109,6 +111,8 @@ unsigned int Scene3D::compileShader(unsigned int type, const char *source) {
 
 void Scene3D::init() {
 
+  std::cout << "🚨 LE JEU S'EXECUTE DEPUIS CE DOSSIER : " << std::filesystem::current_path() << std::endl;
+
   const char *vsCode = R"(
         #version 330 core
         layout (location = 0) in vec3 aPos;
@@ -184,15 +188,19 @@ void Scene3D::init() {
 
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   glBindVertexArray(0);
+
+  modelPawn   = assetManager.getModel("ressources/models/pawn.obj");
+  modelRook   = assetManager.getModel("ressources/models/rook.obj");
+  modelKnight = assetManager.getModel("ressources/models/knight.obj");
+  modelBishop = assetManager.getModel("ressources/models/bishop.obj");
+  modelQueen  = assetManager.getModel("ressources/models/queen.obj");
+  modelKing   = assetManager.getModel("ressources/models/king.obj");
 }
 
 void Scene3D::draw(const Game &game, float deltaTime, std::optional<Coords> selectedCase, const std::vector<Coords>& possibleMoves) {
 
   // 1. SETUP DE BASE
   glEnable(GL_DEPTH_TEST);
-
-  // Si tu as un Skybox, dessine-le ICI (avant le reste)
-  // ...
 
   glUseProgram(shaderProgram);
   glBindVertexArray(VAO);
@@ -221,18 +229,16 @@ void Scene3D::draw(const Game &game, float deltaTime, std::optional<Coords> sele
   ImGuiIO &io = ImGui::GetIO();
   float width = io.DisplaySize.x;
   float height = io.DisplaySize.y;
-  if (height <= 0)
-    height = 1.0f;
+  if (height <= 0) height = 1.0f;
   float aspectRatio = width / height;
 
-  glm::mat4 projection =
-      glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
+  glm::mat4 projection = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
   glm::mat4 view = glm::lookAt(camPos, camTarget, glm::vec3(0.0f, 1.0f, 0.0f));
 
   lastProjection = projection; 
   lastView = view;
 
-  // 5. RÉCUPÉRATION DES UNIFORMS (Nouveaux noms !)
+  // 5. RÉCUPÉRATION DES UNIFORMS
   int modelLoc = glGetUniformLocation(shaderProgram, "model");
   int viewLoc = glGetUniformLocation(shaderProgram, "view");
   int projLoc = glGetUniformLocation(shaderProgram, "projection");
@@ -241,13 +247,9 @@ void Scene3D::draw(const Game &game, float deltaTime, std::optional<Coords> sele
   int uLightDirLoc = glGetUniformLocation(shaderProgram, "uLightDir");
   int uViewPosLoc = glGetUniformLocation(shaderProgram, "uViewPos");
 
-  // 6. ENVOI DES DONNÉES GLOBALES (Lumière & Caméra)
-  // Direction du soleil (vient d'en haut à droite)
+  // 6. ENVOI DES DONNÉES GLOBALES
   glUniform3f(uLightDirLoc, -0.5f, -1.0f, -0.5f);
-  // Position de la caméra (pour le brillant spéculaire)
   glUniform3f(uViewPosLoc, camPos.x, camPos.y, camPos.z);
-
-  // On envoie View et Projection UNE SEULE FOIS (optimisation)
   glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
   glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
@@ -262,11 +264,10 @@ void Scene3D::draw(const Game &game, float deltaTime, std::optional<Coords> sele
       model = glm::scale(model, glm::vec3(0.95f, 0.1f, 0.95f));
       glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
-      // Gestion des couleurs avec Feedback Visuel
       if (selectedCase.has_value() && selectedCase.value() == currentPos) {
-          glUniform3f(uColorLoc, 0.2f, 0.8f, 0.2f); // Vert (Sélection)
+          glUniform3f(uColorLoc, 0.2f, 0.8f, 0.2f); // Vert
       } else if (std::find(possibleMoves.begin(), possibleMoves.end(), currentPos) != possibleMoves.end()) {
-          glUniform3f(uColorLoc, 0.4f, 0.7f, 1.0f); // Bleu clair (Coup possible)
+          glUniform3f(uColorLoc, 0.4f, 0.7f, 1.0f); // Bleu clair
       } else {
           if ((x + y) % 2 != 0) glUniform3f(uColorLoc, 0.3f, 0.3f, 0.3f);
           else glUniform3f(uColorLoc, 0.9f, 0.9f, 0.9f);
@@ -277,32 +278,48 @@ void Scene3D::draw(const Game &game, float deltaTime, std::optional<Coords> sele
       const Piece *p = game.getBoard().getPiece(x, y);
 
       if (p) {
-        // Si c'est la pièce qui bouge, on ne la dessine pas ici
         if (isAnimating && x == animTargetSquare.x && y == animTargetSquare.y) {
           continue;
         }
 
+        std::shared_ptr<Model3D> currentModel = nullptr;
+        switch (p->getType()) {
+            case PieceType::Pawn:   currentModel = modelPawn; break;
+            case PieceType::Rook:   currentModel = modelRook; break;
+            case PieceType::Knight: currentModel = modelKnight; break;
+            case PieceType::Bishop: currentModel = modelBishop; break;
+            case PieceType::Queen:  currentModel = modelQueen; break;
+            case PieceType::King:   currentModel = modelKing; break;
+            default: break;
+        }
+
         glm::mat4 pieceModel = glm::mat4(1.0f);
-        pieceModel = glm::translate(pieceModel, glm::vec3(x, 0.5f, y));
 
-        float height = (p->getType() == PieceType::King) ? 1.5f : 0.8f;
-        pieceModel = glm::scale(pieceModel, glm::vec3(0.4f, height, 0.4f));
+        if (currentModel && currentModel->getIsLoaded()) {
+            pieceModel = glm::translate(pieceModel, glm::vec3(x, 0.05f, y)); 
+        } else {
+            pieceModel = glm::translate(pieceModel, glm::vec3(x, 0.5f, y));
+            float height = (p->getType() == PieceType::King) ? 1.5f : 0.8f;
+            pieceModel = glm::scale(pieceModel, glm::vec3(0.4f, height, 0.4f));
+        }
 
-        // Envoi Model Pièce
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(pieceModel));
 
-        // Couleurs
-        if (p->getColor() == PieceColor::White)
-          glUniform3f(
-              uColorLoc, 1.0f, 0.9f,
-              0.8f); // Blanc un peu "ivoire" pour mieux réagir à la lumière
-        else
-          glUniform3f(uColorLoc, 0.1f, 0.1f, 0.1f); // Noir pas totalement noir
+        if (p->getColor() == PieceColor::White) {
+          glUniform3f(uColorLoc, 1.0f, 0.9f, 0.8f); 
+        } else {
+          glUniform3f(uColorLoc, 0.1f, 0.1f, 0.1f);
+        }
 
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-      }
-    }
-  }
+        if (currentModel && currentModel->getIsLoaded()) {
+            currentModel->draw();
+            glBindVertexArray(VAO); 
+        } else {
+            glDrawArrays(GL_TRIANGLES, 0, 36); 
+        }
+      } // Fin du if(p)
+    } // Fin du for(x)
+  } // Fin du for(y)
 
   // 8. DESSIN DE L'ANIMATION
   if (isAnimating) {
@@ -317,22 +334,18 @@ void Scene3D::draw(const Game &game, float deltaTime, std::optional<Coords> sele
     float h = (animPieceType == PieceType::King) ? 1.5f : 0.8f;
     model = glm::scale(model, glm::vec3(0.4f, h, 0.4f));
 
-    // Envoi Model Animation
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
-    if (animPieceColor == PieceColor::White)
-      glUniform3f(uColorLoc, 1.0f, 0.9f, 0.8f);
-    else
-      glUniform3f(uColorLoc, 0.1f, 0.1f, 0.1f);
+    if (animPieceColor == PieceColor::White) glUniform3f(uColorLoc, 1.0f, 0.9f, 0.8f);
+    else glUniform3f(uColorLoc, 0.1f, 0.1f, 0.1f);
 
     glDrawArrays(GL_TRIANGLES, 0, 36);
   }
 
   glBindVertexArray(0);
-}
+} // FIN PARFAITE DE LA FONCTION DRAW
 
-void Scene3D::triggerMoveAnimation(Coords from, Coords to, PieceType type,
-                                   PieceColor color) {
+void Scene3D::triggerMoveAnimation(Coords from, Coords to, PieceType type, PieceColor color) {
   isAnimating = true;
   animProgress = 0.0f;
 
@@ -343,6 +356,7 @@ void Scene3D::triggerMoveAnimation(Coords from, Coords to, PieceType type,
   animPieceColor = color;
   animTargetSquare = to;
 }
+
 
 std::optional<Coords> Scene3D::getClickedSquare() {
     ImGuiIO& io = ImGui::GetIO();

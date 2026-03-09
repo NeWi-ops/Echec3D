@@ -20,7 +20,6 @@ install_manifest.txt
 
 # --- C++ Compilation Artifacts ---
 *.o
-*.obj
 *.exe
 *.dll
 *.so
@@ -29,6 +28,7 @@ install_manifest.txt
 *.lib
 *.out
 *.app
+*.DS_Store
 
 # --- ImGui Specific ---
 # ImGui sauvegarde la position des fenêtres ici. 
