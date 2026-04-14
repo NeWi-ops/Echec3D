@@ -166,13 +166,20 @@ void Scene3D::init() {
             }
 
             vec3 ambient = 0.3 * vec3(1.0);
-            vec3 norm = normalize(Normal);
+            
+            vec3 norm = Normal;
+            if (length(norm) > 0.01) {
+                norm = normalize(norm);
+            } else {
+                norm = vec3(0.0, 1.0, 0.0);
+            }
+            
             vec3 lightDir = normalize(-uLightDir);
             float diff = max(dot(norm, lightDir), 0.0);
             vec3 diffuse = diff * vec3(1.0);
             vec3 viewDir = normalize(uViewPos - FragPos);
             vec3 reflectDir = reflect(-lightDir, norm);  
-            float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
+            float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
             vec3 specular = 0.5 * spec * vec3(1.0);  
             vec3 result = (ambient + diffuse + specular) * color;
             FragColor = vec4(result, 1.0);
@@ -331,7 +338,8 @@ void Scene3D::draw(const Game &game, float deltaTime,
   ImGuiIO &io = ImGui::GetIO();
   float width = io.DisplaySize.x;
   float height = io.DisplaySize.y;
-  if (height <= 0) height = 1.0f;
+  if (width <= 0.001f) width = 1.0f;
+  if (height <= 0.001f) height = 1.0f;
   float aspectRatio = width / height;
 
   glm::mat4 projection = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
@@ -385,7 +393,7 @@ void Scene3D::draw(const Game &game, float deltaTime,
       glDrawArrays(GL_TRIANGLES, 0, 36);
 
       glUniform1i(uUseTextureLoc, 0); // Disable texture for pieces
-      glBindTexture(GL_TEXTURE_2D, 0);
+      glBindTexture(GL_TEXTURE_2D, whiteTileTex); // Bind to a valid texture to prevent null descriptor crash
 
       // --- B. LA PIÈCE (STATIQUE) ---
       const Piece *p = game.getBoard().getPiece(x, y);
@@ -410,6 +418,16 @@ void Scene3D::draw(const Game &game, float deltaTime,
 
         if (currentModel && currentModel->getIsLoaded()) {
             pieceModel = glm::translate(pieceModel, glm::vec3(x, 0.05f, y)); 
+            
+            if (p->getType() == PieceType::Rook) {
+                pieceModel = glm::scale(pieceModel, glm::vec3(0.25f));
+            } else {
+                pieceModel = glm::scale(pieceModel, glm::vec3(0.15f));
+            }
+
+            if (p->getColor() == PieceColor::Black) {
+                pieceModel = glm::rotate(pieceModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+            }
         } else {
             pieceModel = glm::translate(pieceModel, glm::vec3(x, 0.5f, y));
             float height = (p->getType() == PieceType::King) ? 1.5f : 0.8f;
@@ -442,18 +460,46 @@ void Scene3D::draw(const Game &game, float deltaTime,
     currentPos.y += jumpHeight * 4.0f * animProgress * (1.0f - animProgress);
 
     glm::mat4 model = glm::mat4(1.0f);
-    model = glm::translate(model, currentPos);
-    model = glm::translate(model, glm::vec3(0.0f, 0.5f, 0.0f));
+    
+    std::shared_ptr<Model3D> currentModel = nullptr;
+    switch (animPieceType) {
+        case PieceType::Pawn:   currentModel = modelPawn; break;
+        case PieceType::Rook:   currentModel = modelRook; break;
+        case PieceType::Knight: currentModel = modelKnight; break;
+        case PieceType::Bishop: currentModel = modelBishop; break;
+        case PieceType::Queen:  currentModel = modelQueen; break;
+        case PieceType::King:   currentModel = modelKing; break;
+        default: break;
+    }
 
-    float h = (animPieceType == PieceType::King) ? 1.5f : 0.8f;
-    model = glm::scale(model, glm::vec3(0.4f, h, 0.4f));
+    if (currentModel && currentModel->getIsLoaded()) {
+        model = glm::translate(model, currentPos + glm::vec3(0.0f, 0.05f, 0.0f));
+        if (animPieceType == PieceType::Rook) {
+            model = glm::scale(model, glm::vec3(0.25f));
+        } else {
+            model = glm::scale(model, glm::vec3(0.15f));
+        }
+
+        if (animPieceColor == PieceColor::Black) {
+            model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        }
+    } else {
+        model = glm::translate(model, currentPos + glm::vec3(0.0f, 0.5f, 0.0f));
+        float h = (animPieceType == PieceType::King) ? 1.5f : 0.8f;
+        model = glm::scale(model, glm::vec3(0.4f, h, 0.4f));
+    }
 
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
     if (animPieceColor == PieceColor::White) glUniform3f(uColorLoc, 1.0f, 0.9f, 0.8f);
     else glUniform3f(uColorLoc, 0.1f, 0.1f, 0.1f);
 
-    glDrawArrays(GL_TRIANGLES, 0, 36);
+    if (currentModel && currentModel->getIsLoaded()) {
+        currentModel->draw();
+        glBindVertexArray(VAO); 
+    } else {
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+    }
   }
 
   glDepthFunc(GL_LEQUAL);
@@ -511,6 +557,9 @@ std::optional<Coords> Scene3D::getClickedSquare() {
   float mouseY = io.MousePos.y;
   float width = io.DisplaySize.x;
   float height = io.DisplaySize.y;
+
+  if (width <= 0.001f) width = 1.0f;
+  if (height <= 0.001f) height = 1.0f;
 
   // 2. Conversion en NDC (-1 à 1)
   float x = (2.0f * mouseX) / width - 1.0f;

@@ -37,40 +37,43 @@ Model3D::Model3D(const std::string& filepath) {
             iss >> vn.x >> vn.y >> vn.z;
             temp_normals.push_back(vn);
         } 
-        else if (type == "f") { // Face (Triangle)
-            std::string vertex1, vertex2, vertex3;
-            iss >> vertex1 >> vertex2 >> vertex3;
+        else if (type == "f") { // Face (Triangle ou plus)
+            std::vector<std::string> face_vertices;
+            std::string vertex;
+            while (iss >> vertex) {
+                face_vertices.push_back(vertex);
+            }
 
-            std::string vertices[3] = {vertex1, vertex2, vertex3};
-            
-            // Décodage des indices (gère les formats v/vt/vn, v//vn ou juste v)
-            for (int i = 0; i < 3; ++i) {
-                int vIdx = 0, vtIdx = 0, vnIdx = 0;
+            // Triangulation (fan depuis face_vertices[0])
+            for (size_t i = 1; i + 1 < face_vertices.size(); ++i) {
+                std::string vertices[3] = {face_vertices[0], face_vertices[i], face_vertices[i+1]};
                 
-                if (vertices[i].find("//") != std::string::npos) {
-                    sscanf(vertices[i].c_str(), "%d//%d", &vIdx, &vnIdx);
-                } else if (vertices[i].find("/") != std::string::npos) {
-                    sscanf(vertices[i].c_str(), "%d/%d/%d", &vIdx, &vtIdx, &vnIdx);
-                } else {
-                    sscanf(vertices[i].c_str(), "%d", &vIdx);
-                }
+                for (int j = 0; j < 3; ++j) {
+                    int vIdx = 0, vtIdx = 0, vnIdx = 0;
+                    
+                    if (vertices[j].find("//") != std::string::npos) {
+                        sscanf(vertices[j].c_str(), "%d//%d", &vIdx, &vnIdx);
+                    } else if (vertices[j].find("/") != std::string::npos) {
+                        sscanf(vertices[j].c_str(), "%d/%d/%d", &vIdx, &vtIdx, &vnIdx);
+                    } else {
+                        sscanf(vertices[j].c_str(), "%d", &vIdx);
+                    }
 
-                // En format OBJ, les indices commencent à 1. En C++, à 0.
-                if (vIdx > 0 && vIdx <= temp_vertices.size()) {
-                    glm::vec3 vertex = temp_vertices[vIdx - 1];
-                    final_data.push_back(vertex.x);
-                    final_data.push_back(vertex.y);
-                    final_data.push_back(vertex.z);
-                }
+                    if (vIdx > 0 && (size_t)vIdx <= temp_vertices.size()) {
+                        glm::vec3 v = temp_vertices[vIdx - 1];
+                        final_data.push_back(v.x);
+                        final_data.push_back(v.y);
+                        final_data.push_back(v.z);
+                    }
 
-                if (vnIdx > 0 && vnIdx <= temp_normals.size()) {
-                    glm::vec3 normal = temp_normals[vnIdx - 1];
-                    final_data.push_back(normal.x);
-                    final_data.push_back(normal.y);
-                    final_data.push_back(normal.z);
-                } else {
-                    // Normale par défaut si le fichier n'en a pas
-                    final_data.push_back(0.0f); final_data.push_back(1.0f); final_data.push_back(0.0f);
+                    if (vnIdx > 0 && (size_t)vnIdx <= temp_normals.size()) {
+                        glm::vec3 normal = temp_normals[vnIdx - 1];
+                        final_data.push_back(normal.x);
+                        final_data.push_back(normal.y);
+                        final_data.push_back(normal.z);
+                    } else {
+                        final_data.push_back(0.0f); final_data.push_back(1.0f); final_data.push_back(0.0f);
+                    }
                 }
             }
         }
