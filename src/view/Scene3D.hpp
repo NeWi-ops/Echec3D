@@ -11,14 +11,22 @@ public:
   ~Scene3D();
 
   void init();
-  void draw(const Game &game, float deltaTime,  std::optional<Coords> selectedCase, const std::vector<Coords>& possibleMoves);
+  void draw(const Game &game, float deltaTime,
+            std::optional<Coords> selectedCase,
+            const std::vector<Coords> &possibleMoves);
   void triggerMoveAnimation(Coords from, Coords to, PieceType type,
                             PieceColor color);
-  
+
   std::optional<Coords> getClickedSquare();
 
-                            
 private:
+  unsigned int skyboxShader;
+  unsigned int skyboxVAO, skyboxVBO;
+  unsigned int cubemapTexture;
+
+  unsigned int whiteTileTex;
+  unsigned int blackTileTex;
+
   unsigned int shaderProgram;
   unsigned int VAO, VBO;
   unsigned int compileShader(unsigned int type, const char *source);
@@ -51,7 +59,6 @@ private:
 
   glm::mat4 lastProjection;
   glm::mat4 lastView;
-    
+
   bool isClicking = false;
 };
-

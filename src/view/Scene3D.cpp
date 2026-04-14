@@ -1,11 +1,11 @@
 #include "Scene3D.hpp"
 #include <algorithm>
 #include <cmath>
-#include <fstream> 
+#include <fstream>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
-#include <sstream> 
+#include <sstream>
 #include <vector>
 #include "Model3D.hpp"
 #include <filesystem>
@@ -27,39 +27,54 @@ std::string loadShaderFile(const char *filename) {
   return ret;
 }
 float cubeVertices[] = {
-    // positions          // normales
+    // positions           // normales          // texcoords
     // Face Arrière
-    -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.5f, -0.5f, -0.5f, 0.0f, 0.0f,
-    -1.0f, 0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.5f, 0.5f, -0.5f, 0.0f, 0.0f,
-    -1.0f, -0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f, -0.5f, -0.5f, -0.5f, 0.0f,
-    0.0f, -1.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
+     0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 0.0f,
+     0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
+     0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
+    -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 1.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
 
     // Face Avant
-    -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f,
-    0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f,
-    -0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f,
+    -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 0.0f,
+     0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f, 0.0f,
+     0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f, 1.0f,
+     0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f, 1.0f,
+    -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 1.0f,
+    -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 0.0f,
 
     // Face Gauche
-    -0.5f, 0.5f, 0.5f, -1.0f, 0.0f, 0.0f, -0.5f, 0.5f, -0.5f, -1.0f, 0.0f, 0.0f,
-    -0.5f, -0.5f, -0.5f, -1.0f, 0.0f, 0.0f, -0.5f, -0.5f, -0.5f, -1.0f, 0.0f,
-    0.0f, -0.5f, -0.5f, 0.5f, -1.0f, 0.0f, 0.0f, -0.5f, 0.5f, 0.5f, -1.0f, 0.0f,
-    0.0f,
+    -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
+    -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+    -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
+    -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
+    -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
+    -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
 
     // Face Droite
-    0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 0.5f, 0.5f, -0.5f, 1.0f, 0.0f, 0.0f,
-    0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 0.0f,
-    0.5f, -0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 0.0f,
+     0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+     0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
+     0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
+     0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
+     0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
+     0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
 
     // Face Bas
-    -0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 0.5f, -0.5f, -0.5f, 0.0f, -1.0f,
-    0.0f, 0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 0.5f, -0.5f, 0.5f, 0.0f, -1.0f,
-    0.0f, -0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, -0.5f, -0.5f, 0.5f, 0.0f,
-    -1.0f, 0.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
+     0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 1.0f,
+     0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
+     0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
+    -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 0.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
 
     // Face Haut
-    -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f,
-    0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f,
-    -0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f};
+    -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f,
+     0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 1.0f,
+     0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
+     0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
+    -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 0.0f,
+    -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f};
 
 Scene3D::Scene3D() {
 
@@ -117,14 +132,17 @@ void Scene3D::init() {
         #version 330 core
         layout (location = 0) in vec3 aPos;
         layout (location = 1) in vec3 aNormal;
+        layout (location = 2) in vec2 aTexCoords;
         out vec3 FragPos;
         out vec3 Normal;
+        out vec2 TexCoords;
         uniform mat4 model;
         uniform mat4 view;
         uniform mat4 projection;
         void main() {
             FragPos = vec3(model * vec4(aPos, 1.0));
             Normal = mat3(transpose(inverse(model))) * aNormal;
+            TexCoords = aTexCoords;
             gl_Position = projection * view * vec4(FragPos, 1.0);
         }
     )";
@@ -134,10 +152,19 @@ void Scene3D::init() {
         out vec4 FragColor;
         in vec3 FragPos;
         in vec3 Normal;
+        in vec2 TexCoords;
         uniform vec3 uColor;
         uniform vec3 uLightDir;
         uniform vec3 uViewPos;
+        uniform bool uUseTexture;
+        uniform sampler2D uTex;
+
         void main() {
+            vec3 color = uColor;
+            if (uUseTexture) {
+                color *= texture(uTex, TexCoords).rgb;
+            }
+
             vec3 ambient = 0.3 * vec3(1.0);
             vec3 norm = normalize(Normal);
             vec3 lightDir = normalize(-uLightDir);
@@ -147,7 +174,7 @@ void Scene3D::init() {
             vec3 reflectDir = reflect(-lightDir, norm);  
             float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
             vec3 specular = 0.5 * spec * vec3(1.0);  
-            vec3 result = (ambient + diffuse + specular) * uColor;
+            vec3 result = (ambient + diffuse + specular) * color;
             FragColor = vec4(result, 1.0);
         }
     )";
@@ -176,15 +203,18 @@ void Scene3D::init() {
                GL_STATIC_DRAW);
 
   // 1. POSITION (Location 0)
-  // 6 * sizeof(float) car chaque sommet a maintenant 6 valeurs
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)0);
   glEnableVertexAttribArray(0);
 
   // 2. NORMALES (Location 1)
-  // On commence à lire après les 3 premiers floats (les positions)
-  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float),
+  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
                         (void *)(3 * sizeof(float)));
   glEnableVertexAttribArray(1);
+
+  // 3. TEXCOORDS (Location 2)
+  glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
+                        (void *)(6 * sizeof(float)));
+  glEnableVertexAttribArray(2);
 
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   glBindVertexArray(0);
@@ -195,9 +225,81 @@ void Scene3D::init() {
   modelBishop = assetManager.getModel("ressources/models/bishop.obj");
   modelQueen  = assetManager.getModel("ressources/models/queen.obj");
   modelKing   = assetManager.getModel("ressources/models/king.obj");
+  float skyboxVertices[] = {
+      // Positions
+      // Face Arrière (Back)
+      -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f,
+      -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f,
+
+      // Face Gauche (Left)
+      -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f,
+      -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f,
+
+      // Face Droite (Right)
+      1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+      1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f,
+
+      // Face Avant (Front)
+      -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+      1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f,
+
+      // Face Haut (Top)
+      -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+      -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f,
+
+      // Face Bas (Bottom)
+      -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f,
+      -1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f};
+
+  const char *skyVs = R"(
+        #version 330 core
+        layout (location = 0) in vec3 aPos;
+        out vec3 TexCoords;
+        uniform mat4 view;
+        uniform mat4 projection;
+        void main() {
+            TexCoords = aPos;
+            vec4 pos = projection * view * vec4(aPos, 1.0);
+            gl_Position = pos.xyww; // Force la profondeur au maximum
+        }
+    )";
+
+  const char *skyFs = R"(
+        #version 330 core
+        out vec4 FragColor;
+        in vec3 TexCoords;
+        uniform samplerCube skybox;
+        void main() {
+             FragColor = texture(skybox, TexCoords);
+        }
+    )";
+
+  unsigned int skyVsId = compileShader(GL_VERTEX_SHADER, skyVs);
+  unsigned int skyFsId = compileShader(GL_FRAGMENT_SHADER, skyFs);
+  skyboxShader = glCreateProgram();
+  glAttachShader(skyboxShader, skyVsId);
+  glAttachShader(skyboxShader, skyFsId);
+  glLinkProgram(skyboxShader);
+  glDeleteShader(skyVsId);
+  glDeleteShader(skyFsId);
+
+  glGenVertexArrays(1, &skyboxVAO);
+  glGenBuffers(1, &skyboxVBO);
+  glBindVertexArray(skyboxVAO);
+  glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices,
+               GL_STATIC_DRAW);
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+
+  cubemapTexture = assetManager.getCubemap("ressources/images/cubemap.png");
+  whiteTileTex = assetManager.getTexture2D("ressources/images/white-marble_albedo.png");
+  blackTileTex = assetManager.getTexture2D("ressources/images/dark-wood-stain_albedo.png");
 }
 
-void Scene3D::draw(const Game &game, float deltaTime, std::optional<Coords> selectedCase, const std::vector<Coords>& possibleMoves) {
+void Scene3D::draw(const Game &game, float deltaTime,
+                   std::optional<Coords> selectedCase,
+                   const std::vector<Coords> &possibleMoves) {
 
   // 1. SETUP DE BASE
   glEnable(GL_DEPTH_TEST);
@@ -235,7 +337,7 @@ void Scene3D::draw(const Game &game, float deltaTime, std::optional<Coords> sele
   glm::mat4 projection = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
   glm::mat4 view = glm::lookAt(camPos, camTarget, glm::vec3(0.0f, 1.0f, 0.0f));
 
-  lastProjection = projection; 
+  lastProjection = projection;
   lastView = view;
 
   // 5. RÉCUPÉRATION DES UNIFORMS
@@ -246,6 +348,7 @@ void Scene3D::draw(const Game &game, float deltaTime, std::optional<Coords> sele
   int uColorLoc = glGetUniformLocation(shaderProgram, "uColor");
   int uLightDirLoc = glGetUniformLocation(shaderProgram, "uLightDir");
   int uViewPosLoc = glGetUniformLocation(shaderProgram, "uViewPos");
+  int uUseTextureLoc = glGetUniformLocation(shaderProgram, "uUseTexture"); // Ajout variable texturage
 
   // 6. ENVOI DES DONNÉES GLOBALES
   glUniform3f(uLightDirLoc, -0.5f, -1.0f, -0.5f);
@@ -264,15 +367,25 @@ void Scene3D::draw(const Game &game, float deltaTime, std::optional<Coords> sele
       model = glm::scale(model, glm::vec3(0.95f, 0.1f, 0.95f));
       glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
-      if (selectedCase.has_value() && selectedCase.value() == currentPos) {
-          glUniform3f(uColorLoc, 0.2f, 0.8f, 0.2f); // Vert
-      } else if (std::find(possibleMoves.begin(), possibleMoves.end(), currentPos) != possibleMoves.end()) {
-          glUniform3f(uColorLoc, 0.4f, 0.7f, 1.0f); // Bleu clair
+      glUniform1i(uUseTextureLoc, 1);
+      if ((x + y) % 2 != 0) {
+          glBindTexture(GL_TEXTURE_2D, blackTileTex);
       } else {
-          if ((x + y) % 2 != 0) glUniform3f(uColorLoc, 0.3f, 0.3f, 0.3f);
-          else glUniform3f(uColorLoc, 0.9f, 0.9f, 0.9f);
+          glBindTexture(GL_TEXTURE_2D, whiteTileTex);
       }
+
+      if (selectedCase.has_value() && selectedCase.value() == currentPos) {
+          glUniform3f(uColorLoc, 0.4f, 1.0f, 0.4f); // Vert clair
+      } else if (std::find(possibleMoves.begin(), possibleMoves.end(), currentPos) != possibleMoves.end()) {
+          glUniform3f(uColorLoc, 0.6f, 0.8f, 1.0f); // Bleu clair
+      } else {
+          glUniform3f(uColorLoc, 1.0f, 1.0f, 1.0f); // Neutre
+      }
+      
       glDrawArrays(GL_TRIANGLES, 0, 36);
+
+      glUniform1i(uUseTextureLoc, 0); // Disable texture for pieces
+      glBindTexture(GL_TEXTURE_2D, 0);
 
       // --- B. LA PIÈCE (STATIQUE) ---
       const Piece *p = game.getBoard().getPiece(x, y);
@@ -322,6 +435,7 @@ void Scene3D::draw(const Game &game, float deltaTime, std::optional<Coords> sele
   } // Fin du for(y)
 
   // 8. DESSIN DE L'ANIMATION
+  glUniform1i(uUseTextureLoc, 0);
   if (isAnimating) {
     glm::vec3 currentPos = glm::mix(animStartPos, animEndPos, animProgress);
     float jumpHeight = 1.0f;
@@ -342,6 +456,31 @@ void Scene3D::draw(const Game &game, float deltaTime, std::optional<Coords> sele
     glDrawArrays(GL_TRIANGLES, 0, 36);
   }
 
+  glDepthFunc(GL_LEQUAL);
+
+  // B. On change de Shader
+  glUseProgram(skyboxShader);
+
+  // C. On prépare la vue (sans translation)
+  glm::mat4 skyView = glm::mat4(glm::mat3(view));
+
+  glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "view"), 1, GL_FALSE,
+                     glm::value_ptr(skyView));
+  glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "projection"), 1,
+                     GL_FALSE, glm::value_ptr(projection));
+
+  // D. On change de VAO (Important !)
+  glBindVertexArray(skyboxVAO);
+
+  // E. On bind la texture (si tu en as une, sinon code couleur shader)
+  glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+
+  glDrawArrays(GL_TRIANGLES, 0, 36);
+
+  // F. On remet tout propre
+  glBindVertexArray(0);
+  glDepthFunc(GL_LESS); // Retour à la normale pour la prochaine frame
+
   glBindVertexArray(0);
 } // FIN PARFAITE DE LA FONCTION DRAW
 
@@ -359,54 +498,57 @@ void Scene3D::triggerMoveAnimation(Coords from, Coords to, PieceType type, Piece
 
 
 std::optional<Coords> Scene3D::getClickedSquare() {
-    ImGuiIO& io = ImGui::GetIO();
-    
-    // Ne pas cliquer si la souris est sur une fenêtre ImGui (comme ton historique)
-    if (io.WantCaptureMouse || !ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
-        return std::nullopt;
-    }
+  ImGuiIO &io = ImGui::GetIO();
 
-    // 1. Coordonnées de la souris (0 à 1)
-    float mouseX = io.MousePos.x;
-    float mouseY = io.MousePos.y;
-    float width = io.DisplaySize.x;
-    float height = io.DisplaySize.y;
-
-    // 2. Conversion en NDC (-1 à 1)
-    float x = (2.0f * mouseX) / width - 1.0f;
-    float y = 1.0f - (2.0f * mouseY) / height; // Inversé en OpenGL
-
-    // 3. Création du rayon en espace monde
-    glm::mat4 invVP = glm::inverse(lastProjection * lastView);
-    glm::vec4 screenPosNear(x, y, -1.0f, 1.0f);
-    glm::vec4 screenPosFar(x, y, 1.0f, 1.0f);
-
-    glm::vec4 worldPosNear = invVP * screenPosNear;
-    glm::vec4 worldPosFar = invVP * screenPosFar;
-
-    worldPosNear /= worldPosNear.w;
-    worldPosFar /= worldPosFar.w;
-
-    glm::vec3 rayOrigin = glm::vec3(worldPosNear);
-    glm::vec3 rayDir = glm::normalize(glm::vec3(worldPosFar) - rayOrigin);
-
-    // 4. Intersection Rayon / Plan (y = 0)
-    // Formule : t = -origin.y / dir.y
-    if (std::abs(rayDir.y) < 0.0001f) return std::nullopt; // Parallèle au plateau
-
-    float t = -rayOrigin.y / rayDir.y;
-    if (t < 0) return std::nullopt; // Le plateau est derrière la caméra
-
-    glm::vec3 hitPoint = rayOrigin + t * rayDir;
-
-    // 5. Conversion en coordonnées de plateau (0 à 7)
-    // On arrondit car tes cases sont centrées sur des entiers (x, 0, y)
-    int boardX = std::floor(hitPoint.x + 0.5f);
-    int boardY = std::floor(hitPoint.z + 0.5f);
-
-    if (boardX >= 0 && boardX < 8 && boardY >= 0 && boardY < 8) {
-        return Coords{boardX, boardY};
-    }
-
+  // Ne pas cliquer si la souris est sur une fenêtre ImGui (comme ton
+  // historique)
+  if (io.WantCaptureMouse || !ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
     return std::nullopt;
+  }
+
+  // 1. Coordonnées de la souris (0 à 1)
+  float mouseX = io.MousePos.x;
+  float mouseY = io.MousePos.y;
+  float width = io.DisplaySize.x;
+  float height = io.DisplaySize.y;
+
+  // 2. Conversion en NDC (-1 à 1)
+  float x = (2.0f * mouseX) / width - 1.0f;
+  float y = 1.0f - (2.0f * mouseY) / height; // Inversé en OpenGL
+
+  // 3. Création du rayon en espace monde
+  glm::mat4 invVP = glm::inverse(lastProjection * lastView);
+  glm::vec4 screenPosNear(x, y, -1.0f, 1.0f);
+  glm::vec4 screenPosFar(x, y, 1.0f, 1.0f);
+
+  glm::vec4 worldPosNear = invVP * screenPosNear;
+  glm::vec4 worldPosFar = invVP * screenPosFar;
+
+  worldPosNear /= worldPosNear.w;
+  worldPosFar /= worldPosFar.w;
+
+  glm::vec3 rayOrigin = glm::vec3(worldPosNear);
+  glm::vec3 rayDir = glm::normalize(glm::vec3(worldPosFar) - rayOrigin);
+
+  // 4. Intersection Rayon / Plan (y = 0)
+  // Formule : t = -origin.y / dir.y
+  if (std::abs(rayDir.y) < 0.0001f)
+    return std::nullopt; // Parallèle au plateau
+
+  float t = -rayOrigin.y / rayDir.y;
+  if (t < 0)
+    return std::nullopt; // Le plateau est derrière la caméra
+
+  glm::vec3 hitPoint = rayOrigin + t * rayDir;
+
+  // 5. Conversion en coordonnées de plateau (0 à 7)
+  // On arrondit car tes cases sont centrées sur des entiers (x, 0, y)
+  int boardX = std::floor(hitPoint.x + 0.5f);
+  int boardY = std::floor(hitPoint.z + 0.5f);
+
+  if (boardX >= 0 && boardX < 8 && boardY >= 0 && boardY < 8) {
+    return Coords{boardX, boardY};
+  }
+
+  return std::nullopt;
 }

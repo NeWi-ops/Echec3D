@@ -17,6 +17,8 @@ private:
     
     // On fait pareil pour les textures (images appliquées sur la 3D)
     std::unordered_map<std::string, std::shared_ptr<Texture>> textures;
+    std::unordered_map<std::string, unsigned int> cubemaps;
+    std::unordered_map<std::string, unsigned int> textures2D;
 
 public:
     AssetManager() = default;
@@ -27,6 +29,9 @@ public:
 
     // Optionnel : la même chose pour tes images/textures
     // std::shared_ptr<Texture> getTexture(const std::string& filepath);
+
+    unsigned int getCubemap(const std::string& filepath);
+    unsigned int getTexture2D(const std::string& filepath);
 
     // Vide la mémoire (utile si tu veux tout réinitialiser)
     void clear();
