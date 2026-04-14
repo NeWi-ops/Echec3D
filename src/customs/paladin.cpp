@@ -5,7 +5,7 @@
 
 int Paladin::calculateBonusMoves(int currentTurnCount) const {
     // 1. On lance les dés (Loi Binomiale)
-    int successes = RandomGenerator::generateBinomial(currentTurnCount, 1.0 / 6.0);
+    int successes = RandomGenerator::generateBinomial(currentTurnCount, 1.0 / 12.0);
     
     // 2. On applique la règle de Game Design
     if (successes == 0) {

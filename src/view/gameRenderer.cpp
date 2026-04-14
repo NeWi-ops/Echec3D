@@ -494,18 +494,37 @@ void GameRenderer::drawStatusWindow(Game &game) {
     ImGui::TextColored(ImVec4(1, 1, 0, 1), "%s", txt.c_str());
   }
 
-  if (selectedCase.has_value()) {
-      const Piece* selectedPiece = game.getBoard().getPiece(selectedCase.value());
-      if (selectedPiece != nullptr) {
-          if (const auto* paladin = dynamic_cast<const Paladin*>(selectedPiece)) {
-              ImGui::Separator();
-              int bonus = paladin->getCurrentBonus();
-              if (bonus == 0) {
-                  ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Status: PARALYZED");
-              } else {
-                  ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Status: READY! Bonus: +%d", bonus);
+  ImGui::Separator();
+
+  int paladinCount = 0;
+  int readyPaladins = 0;
+  int maxBonus = 0;
+
+  for (int y = 0; y < 8; ++y) {
+      for (int x = 0; x < 8; ++x) {
+          const Piece* p = game.getBoard().getPiece(x, y);
+          if (p && p->getColor() == turn) {
+              if (const auto* paladin = dynamic_cast<const Paladin*>(p)) {
+                  paladinCount++;
+                  int bonus = paladin->getCurrentBonus();
+                  if (bonus > 0) {
+                      readyPaladins++;
+                      if (bonus > maxBonus) maxBonus = bonus;
+                  }
               }
           }
+      }
+  }
+
+  if (paladinCount > 0) {
+      if (readyPaladins == 0) {
+          ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.2f, 0.2f, 1.0f));
+          ImGui::TextWrapped("WARNING: Paladin is paralyzed this turn!");
+          ImGui::PopStyleColor();
+      } else {
+          ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 1.0f, 0.2f, 1.0f));
+          ImGui::TextWrapped("WARNING: Paladin is ready (Bonus +%d)!", maxBonus);
+          ImGui::PopStyleColor();
       }
   }
 }
