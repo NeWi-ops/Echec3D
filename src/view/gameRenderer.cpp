@@ -61,6 +61,47 @@ void GameRenderer::render(Game &game, Scene3D *scene3D) {
     drawHistoryWindow(game);
   }
   ImGui::End();
+
+  // WEATHER ALERT UI & ANIMATION QUEUE
+  LightningManager& lm = game.getLightningManager();
+  auto poppedAnims = lm.popAnimations();
+  if (scene3D) {
+      for (const auto& anim : poppedAnims) {
+          scene3D->triggerPathAnimation(anim.path, anim.type, anim.color);
+      }
+  }
+
+  if (lm.hasStruckRecently()) {
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(20, 20));
+    if (ImGui::Begin("!!! WEATHER ALERT !!!", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 0.0f, 1.0f)); // yellow text
+        Coords loc = lm.getLastEpicenter();
+        std::string sq = coordToString(loc);
+        ImGui::SetWindowFontScale(1.5f);
+        ImGui::Text("⚡ LIGHTNING STRUCK AT [%c%c]!", toupper(sq[0]), sq[1]);
+        ImGui::SetWindowFontScale(1.0f);
+        ImGui::PopStyleColor();
+        
+        ImGui::Spacing(); ImGui::Spacing();
+        if (ImGui::Button("Dismiss", ImVec2(-1, 30))) {
+            lm.dismissStrike();
+        }
+    }
+    ImGui::End();
+    ImGui::PopStyleVar();
+  }
+
+  // GLOBAL SCREEN FLASH
+  float flash = lm.getFlashAlpha();
+  if (flash > 0.0f) {
+      ImDrawList* draw_list = ImGui::GetBackgroundDrawList();
+      ImVec2 p_min = ImVec2(0.0f, 0.0f);
+      ImVec2 p_max = ImGui::GetIO().DisplaySize;
+      ImU32 color = ImGui::GetColorU32(ImVec4(1.0f, 1.0f, 1.0f, flash));
+      draw_list->AddRectFilled(p_min, p_max, color);
+  }
 }
 
 void GameRenderer::drawBoard(Game &game, Scene3D *scene3D) {
@@ -101,7 +142,12 @@ void GameRenderer::drawBoard(Game &game, Scene3D *scene3D) {
                               : ImVec4(0.8f, 0.8f, 0.8f, 1.0f);
 
         // Gestion des couleurs (Echec, Sélection, Coups possibles)
-        if (p && p->getType() == PieceType::King &&
+        LightningManager& lm = game.getLightningManager();
+        if (lm.hasStruckRecently() && lm.getLastEpicenter() == pos) {
+          bgCol = ImVec4(0.0f, 0.0f, 0.8f, 0.9f); // Dark blue highlight for epicenter
+        } else if (lm.hasStruckRecently() && std::find(lm.getTargetHighlights().begin(), lm.getTargetHighlights().end(), pos) != lm.getTargetHighlights().end()) {
+          bgCol = ImVec4(1.0f, 1.0f, 0.0f, 0.9f); // Bright yellow highlight for affected targets
+        } else if (p && p->getType() == PieceType::King &&
             p->getColor() == currentTurn) {
           if (state == GameState::Check || state == GameState::Checkmate)
             bgCol = ImVec4(1.0f, 0.3f, 0.3f, 1.0f);
@@ -197,6 +243,8 @@ std::string GameRenderer::getPieceLabel(const Piece *p) {
     return "♛";
   case PieceType::King:
     return "♚";
+  case PieceType::Custom:
+    return "C";
   }
   return "?";
 }
@@ -531,6 +579,10 @@ void GameRenderer::drawStatusWindow(Game &game) {
 
 // --- NOUVELLE FONCTION CENTRALISÉE POUR LE CLIC (UI & 3D) ---
 bool GameRenderer::handleSquareClick(Coords pos, Game &game, Scene3D *scene3D) {
+  if (scene3D && scene3D->isAnimationPlaying()) {
+      return false; // Block user input
+  }
+
   const Board &board = game.getBoard();
   PieceColor currentTurn = game.getCurrentTurn();
 

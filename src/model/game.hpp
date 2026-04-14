@@ -3,6 +3,7 @@
 #include "./Types/ColorEnum.hpp"
 #include "./Types/GameStateEnum.hpp"
 #include "Board/board.hpp"
+#include "../utils/LightningManager.hpp"
 #include <array>
 #include <iostream>
 
@@ -13,6 +14,7 @@ private:
   int m_turnCount = 1;
   GameState m_state = GameState::InProgress;
   std::vector<Move> m_history;
+  LightningManager m_lightningManager;
 
 public:
   Game();
@@ -31,6 +33,8 @@ public:
 
   void undoLastMove();
   const std::vector<Move> &getHistory() const { return m_history; }
+  void clearHistory() { m_history.clear(); }
+  LightningManager& getLightningManager() { return m_lightningManager; }
 
   void resetState(std::unique_ptr<Board> newBoard, PieceColor turn) {
     this->board = std::move(newBoard);

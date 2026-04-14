@@ -16,6 +16,8 @@ public:
             const std::vector<Coords> &possibleMoves);
   void triggerMoveAnimation(Coords from, Coords to, PieceType type,
                             PieceColor color);
+  void triggerPathAnimation(const std::vector<Coords>& path, PieceType type, PieceColor color);
+  bool isAnimationPlaying() const;
 
   std::optional<Coords> getClickedSquare();
 
@@ -38,6 +40,15 @@ private:
   PieceType animPieceType;
   PieceColor animPieceColor;
   Coords animTargetSquare;
+
+  struct AnimState {
+      PieceType type;
+      PieceColor color;
+      std::vector<Coords> path;
+      float progress;
+      bool active;
+  };
+  std::vector<AnimState> activeAnimations;
 
   float camYaw = -90.0f;
   float camPitch = 45.0f;

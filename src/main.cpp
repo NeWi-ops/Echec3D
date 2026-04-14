@@ -107,6 +107,7 @@ int main() {
 
              // --- 4. RENDU UI (2D) ---
              if (game && renderer) {
+               game->getLightningManager().updateVisuals(dt);
                renderer->render(*game, scene3D.get());
              }
            }});

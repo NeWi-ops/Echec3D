@@ -1,0 +1,153 @@
+#include "./../model/game.hpp"
+#include "./../model/Board/board.hpp"
+#include "./../model/Pieces/piece.hpp"
+#include <iostream>
+#include <cmath>
+#include <vector>
+#include <algorithm>
+
+LightningManager::LightningManager() {
+    std::random_device rd;
+    rng = std::mt19937(rd());
+    resetTimer();
+}
+
+void LightningManager::resetTimer() {
+    std::exponential_distribution<double> expDist(0.1);
+    // Ensure we wait at least 1 turn
+    turnsUntilNextStrike = std::max(1, static_cast<int>(std::round(expDist(rng))));
+    
+}
+
+void LightningManager::updateVisuals(float deltaTime) {
+    if (m_flashAlpha > 0.0f) {
+        m_flashAlpha -= deltaTime * 1.5f;
+        if (m_flashAlpha < 0.0f) m_flashAlpha = 0.0f;
+    }
+}
+
+void LightningManager::update(Game& game) {
+    turnsUntilNextStrike--;
+    
+    if (turnsUntilNextStrike > 0) {
+        return;
+    }
+
+    // Strike!
+    std::uniform_int_distribution<int> uniDist(0, 7);
+    int ex = uniDist(rng);
+    int ey = uniDist(rng);
+    
+    lastEpicenter = {ex, ey};
+    m_hasStruckRecently = true;
+    m_flashAlpha = 1.0f;
+    targetHighlights.clear();
+
+    std::cout << "--- THE SKY DARKENS ---\n";
+    std::cout << "LIGHTNING STRIKE at epicenter (" << ex << ", " << ey << ")!\n";
+
+    bool modifiedBoard = false;
+    Board& board = game.getBoard();
+
+    bool isEpicenterImmune = true;
+    std::normal_distribution<double> normDist(2.0, 0.5);
+
+    struct PushTask {
+        Coords from;
+        int dx, dy;
+    };
+    std::vector<PushTask> tasks;
+
+    // Phase 1: Identify all pieces that could be pushed
+    for (int dx = -1; dx <= 1; ++dx) {
+        for (int dy = -1; dy <= 1; ++dy) {
+            if (isEpicenterImmune && dx == 0 && dy == 0) {
+                continue; // Eye of the storm
+            }
+            int px = ex + dx;
+            int py = ey + dy;
+            Coords pos{px, py};
+            if (board.isInsideBoard(pos)) {
+                targetHighlights.push_back(pos); // Highlight entire blast radius
+                if (!board.isEmpty(pos)) {
+                    tasks.push_back({pos, dx, dy});
+                }
+            }
+        }
+    }
+
+    // Phase 2: Execute each push
+    for (const auto& task : tasks) {
+        Piece* p = board.getPiece(task.from);
+        if (!p) continue; // Piece might have been captured by a previous push in this loop
+
+        // Kings are immune to the blast wave and cannot be pushed
+        if (p->getType() == PieceType::King) {
+            continue;
+        }
+
+        int distance = static_cast<int>(std::round(normDist(rng)));
+        distance = std::clamp(distance, 0, 4);
+        if (distance == 0) continue;
+
+        bool moveSuccess = true;
+        Coords target = task.from;
+        bool shouldCapture = false;
+        std::vector<Coords> path;
+        path.push_back(task.from);
+
+        for (int step = 1; step <= distance; ++step) {
+            target = {task.from.x + task.dx * step, task.from.y + task.dy * step};
+            
+            // Rule 1: Out of bounds -> Push fails
+            if (!board.isInsideBoard(target)) {
+                moveSuccess = false;
+                break;
+            }
+
+            path.push_back(target);
+
+            Piece* targetP = board.getPiece(target);
+            if (targetP) {
+                if (step < distance) {
+                    // Obstacle mid-air
+                    moveSuccess = false;
+                    break;
+                }
+                
+                // Rule 2: Ally collision -> Push fails
+                if (targetP->getColor() == p->getColor()) {
+                    moveSuccess = false;
+                    break;
+                }
+                // Rule 3: Enemy King collision -> Push fails
+                if (targetP->getType() == PieceType::King) {
+                    moveSuccess = false;
+                    break;
+                }
+                // Enemy collision -> Capture!
+                shouldCapture = true;
+            }
+        }
+
+        if (moveSuccess) {
+            if (shouldCapture) {
+                board.removePieceAt(target);
+            }
+            
+            recentAnimations.push_back({p->getType(), p->getColor(), path});
+            
+            // Apply movement
+            board.movePiece(task.from, target);
+            targetHighlights.push_back(target);
+            modifiedBoard = true;
+        }
+    }
+
+    if (modifiedBoard) {
+        std::cout << "The blast reshaped the battlefield! History is wiped.\n";
+        game.clearHistory();
+    }
+
+    resetTimer();
+}

@@ -322,6 +322,18 @@ void Scene3D::draw(const Game &game, float deltaTime,
       animProgress = 1.0f;
     }
   }
+  for (auto& anim : activeAnimations) {
+      if (anim.active) {
+          anim.progress += animSpeed * 0.5f * deltaTime; // Slower for sequences
+          if (anim.progress >= 1.0f) {
+              anim.progress = 1.0f;
+              anim.active = false;
+          }
+      }
+  }
+  activeAnimations.erase(std::remove_if(activeAnimations.begin(), activeAnimations.end(),
+                         [](const AnimState& a){ return !a.active; }),
+                         activeAnimations.end());
 
   // 3. CAMÉRA & INPUTS
   updateCameraInput();
@@ -382,7 +394,12 @@ void Scene3D::draw(const Game &game, float deltaTime,
           glBindTexture(GL_TEXTURE_2D, whiteTileTex);
       }
 
-      if (selectedCase.has_value() && selectedCase.value() == currentPos) {
+      LightningManager& lm = const_cast<Game&>(game).getLightningManager();
+      if (lm.hasStruckRecently() && lm.getLastEpicenter() == currentPos) {
+          glUniform3f(uColorLoc, 0.0f, 0.0f, 0.8f); // Dark blue 
+      } else if (lm.hasStruckRecently() && std::find(lm.getTargetHighlights().begin(), lm.getTargetHighlights().end(), currentPos) != lm.getTargetHighlights().end()) {
+          glUniform3f(uColorLoc, 1.0f, 1.0f, 0.0f); // Yellow
+      } else if (selectedCase.has_value() && selectedCase.value() == currentPos) {
           glUniform3f(uColorLoc, 0.4f, 1.0f, 0.4f); // Vert clair
       } else if (std::find(possibleMoves.begin(), possibleMoves.end(), currentPos) != possibleMoves.end()) {
           glUniform3f(uColorLoc, 0.6f, 0.8f, 1.0f); // Bleu clair
@@ -402,6 +419,14 @@ void Scene3D::draw(const Game &game, float deltaTime,
         if (isAnimating && x == animTargetSquare.x && y == animTargetSquare.y) {
           continue;
         }
+
+        bool masked = false;
+        for (const auto& anim : activeAnimations) {
+            if (anim.active && anim.path.back().x == x && anim.path.back().y == y) {
+                masked = true; break;
+            }
+        }
+        if (masked) continue;
 
         std::shared_ptr<Model3D> currentModel = nullptr;
         switch (p->getType()) {
@@ -502,6 +527,62 @@ void Scene3D::draw(const Game &game, float deltaTime,
     }
   }
 
+  for (const auto& anim : activeAnimations) {
+      if (!anim.active) continue;
+      
+      float scaledProgress = anim.progress * (anim.path.size() - 1);
+      int segmentIndex = std::floor(scaledProgress);
+      if (segmentIndex >= (int)anim.path.size() - 1) segmentIndex = anim.path.size() - 2;
+      float localProgress = scaledProgress - segmentIndex;
+
+      glm::vec3 segmentStart = glm::vec3(anim.path[segmentIndex].x, 0.0f, anim.path[segmentIndex].y);
+      glm::vec3 segmentEnd = glm::vec3(anim.path[segmentIndex + 1].x, 0.0f, anim.path[segmentIndex + 1].y);
+
+      glm::vec3 currentPos = glm::mix(segmentStart, segmentEnd, localProgress);
+      float jumpHeight = 1.0f;
+      currentPos.y += jumpHeight * 4.0f * localProgress * (1.0f - localProgress);
+
+      glm::mat4 model = glm::mat4(1.0f);
+      std::shared_ptr<Model3D> currentModel = nullptr;
+      switch (anim.type) {
+          case PieceType::Pawn:   currentModel = modelPawn; break;
+          case PieceType::Rook:   currentModel = modelRook; break;
+          case PieceType::Knight: currentModel = modelKnight; break;
+          case PieceType::Bishop: currentModel = modelBishop; break;
+          case PieceType::Queen:  currentModel = modelQueen; break;
+          case PieceType::King:   currentModel = modelKing; break;
+          default: break;
+      }
+
+      if (currentModel && currentModel->getIsLoaded()) {
+          model = glm::translate(model, currentPos + glm::vec3(0.0f, 0.05f, 0.0f));
+          if (anim.type == PieceType::Rook) {
+              model = glm::scale(model, glm::vec3(0.25f));
+          } else {
+              model = glm::scale(model, glm::vec3(0.15f));
+          }
+
+          if (anim.color == PieceColor::Black) {
+              model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+          }
+      } else {
+          model = glm::translate(model, currentPos + glm::vec3(0.0f, 0.5f, 0.0f));
+          float h = (anim.type == PieceType::King) ? 1.5f : 0.8f;
+          model = glm::scale(model, glm::vec3(0.4f, h, 0.4f));
+      }
+
+      glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+      if (anim.color == PieceColor::White) glUniform3f(uColorLoc, 1.0f, 0.9f, 0.8f);
+      else glUniform3f(uColorLoc, 0.1f, 0.1f, 0.1f);
+
+      if (currentModel && currentModel->getIsLoaded()) {
+          currentModel->draw();
+          glBindVertexArray(VAO); 
+      } else {
+          glDrawArrays(GL_TRIANGLES, 0, 36);
+      }
+  }
+
   glDepthFunc(GL_LEQUAL);
 
   // B. On change de Shader
@@ -542,6 +623,18 @@ void Scene3D::triggerMoveAnimation(Coords from, Coords to, PieceType type, Piece
   animTargetSquare = to;
 }
 
+void Scene3D::triggerPathAnimation(const std::vector<Coords>& path, PieceType type, PieceColor color) {
+    if (path.size() < 2) return;
+    activeAnimations.push_back({type, color, path, 0.0f, true});
+}
+
+bool Scene3D::isAnimationPlaying() const {
+    if (isAnimating) return true;
+    for (const auto& anim : activeAnimations) {
+        if (anim.active) return true;
+    }
+    return false;
+}
 
 std::optional<Coords> Scene3D::getClickedSquare() {
   ImGuiIO &io = ImGui::GetIO();

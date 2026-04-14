@@ -117,6 +117,8 @@ void Game::switchTurn() {
   m_turnCount++;
   board->setTurnCount(m_turnCount);
 
+  m_lightningManager.update(*this);
+
   bool inCheck = Arbiter::isKingInCheck(*board, m_currentTurn);
   bool hasMoves = Arbiter::hasLegalMoves(*board, m_currentTurn);
 
@@ -181,6 +183,9 @@ void Game::undoLastMove() {
 
     case PieceType::King:
       resurrected = std::make_unique<King>(enemyColor);
+      break;
+
+    case PieceType::Custom:
       break;
     }
 
