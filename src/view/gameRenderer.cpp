@@ -1,6 +1,7 @@
 #include "gameRenderer.hpp"
 #include "./../ai/SimpleAI.hpp"
 #include "./../customs/customsPiece.hpp"
+#include "./../customs/paladin.hpp"
 #include "./../model/Fen/FenConverter.hpp"
 #include "./../utils/scenarioRegister.hpp"
 #include "./Scene3D.hpp"
@@ -491,6 +492,21 @@ void GameRenderer::drawStatusWindow(Game &game) {
     textSize = ImGui::CalcTextSize(txt.c_str());
     ImGui::SetCursorPosX((windowWidth - textSize.x) * 0.5f);
     ImGui::TextColored(ImVec4(1, 1, 0, 1), "%s", txt.c_str());
+  }
+
+  if (selectedCase.has_value()) {
+      const Piece* selectedPiece = game.getBoard().getPiece(selectedCase.value());
+      if (selectedPiece != nullptr) {
+          if (const auto* paladin = dynamic_cast<const Paladin*>(selectedPiece)) {
+              ImGui::Separator();
+              int bonus = paladin->getCurrentBonus();
+              if (bonus == 0) {
+                  ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Status: PARALYZED");
+              } else {
+                  ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Status: READY! Bonus: +%d", bonus);
+              }
+          }
+      }
   }
 }
 

@@ -38,6 +38,7 @@ void Game::reset() {
       *this, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - - 0 1");
   this->m_currentTurn = PieceColor::White;
   this->m_turnCount = 1;
+  this->board->setTurnCount(m_turnCount);
   this->m_state = GameState::InProgress;
   this->m_history.clear();
 }
@@ -113,6 +114,8 @@ bool Game::playMove(const Move &moveInput) {
 
 void Game::switchTurn() {
   m_currentTurn = Piece::opposite(m_currentTurn);
+  m_turnCount++;
+  board->setTurnCount(m_turnCount);
 
   bool inCheck = Arbiter::isKingInCheck(*board, m_currentTurn);
   bool hasMoves = Arbiter::hasLegalMoves(*board, m_currentTurn);
@@ -143,6 +146,7 @@ void Game::undoLastMove() {
   switchTurn();
 
   m_turnCount -= 2;
+  board->setTurnCount(m_turnCount);
 
   board->movePiece(lastMove.to, lastMove.from);
 
@@ -203,6 +207,7 @@ void Game::newGame(std::string fen) {
   FenConverter::load(*this, fen);
   this->m_currentTurn = PieceColor::White;
   this->m_turnCount = 1;
+  this->board->setTurnCount(m_turnCount);
   this->m_state = GameState::InProgress;
   this->m_history.clear();
 }

@@ -8,6 +8,7 @@
 class Board {
 private:
   std::array<std::array<std::unique_ptr<Piece>, 8>, 8> board;
+  int m_turnCount = 1;
 
 public:
   Board();
@@ -34,4 +35,7 @@ public:
   void removePieceAt(Coords pos);
 
   Board clone() const;
+
+  int getTurnCount() const { return m_turnCount; }
+  void setTurnCount(int turn) { m_turnCount = turn; }
 };

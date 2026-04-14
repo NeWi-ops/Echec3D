@@ -1,5 +1,5 @@
 #pragma once
-
+#include <iostream>
 #include "./../model/Board/board.hpp"
 #include "./../model/Pieces/piece.hpp"
 #include "./../model/Types/ColorEnum.hpp"
@@ -13,6 +13,14 @@ class Paladin : public CustomPiece {
 public:
   // Constructeur : On passe la couleur au parent (CustomPiece)
   explicit Paladin(PieceColor color) : CustomPiece(color) {}
+
+  // Calcule les mouvements bonus du Paladin (Binomial Bonus Movement).
+  // Lance 'currentTurnCount' dés virtuels, succès avec 1/6 de probabilité.
+  int calculateBonusMoves(int currentTurnCount) const;
+
+  // Accesseurs pour l'UI
+  int getCurrentBonus() const { return currentTurnBonus; }
+  int getLastTurnRolled() const { return lastTurnRolled; }
 
   // =========================================================
   // IMPLEMENTATION DU MOTEUR (Logique de Jeu)
@@ -51,50 +59,7 @@ public:
    * Il se déplace d'1 case dans toutes les directions OU saute en L.
    */
   std::vector<Coords> getPseudoLegalMoves(const Board &board,
-                                          Coords pos) const override {
-    std::vector<Coords> moves;
-
-    // Liste de tous les décalages possibles (8 Roi + 8 Cavalier)
-    const std::vector<Coords> offsets = {// --- ROI (1 case autour) ---
-                                         {-1, -1},
-                                         {-1, 0},
-                                         {-1, 1},
-                                         {0, -1},
-                                         {0, 1},
-                                         {1, -1},
-                                         {1, 0},
-                                         {1, 1},
-
-                                         // --- CAVALIER (Sauts en L) ---
-                                         {-2, -1},
-                                         {-2, 1},
-                                         {-1, -2},
-                                         {-1, 2},
-                                         {1, -2},
-                                         {1, 2},
-                                         {2, -1},
-                                         {2, 1}};
-
-    for (const auto &offset : offsets) {
-      Coords target = {pos.x + offset.x, pos.y + offset.y};
-
-      // 1. Est-ce que la case cible est sur le plateau ?
-      if (!board.isInsideBoard(target)) {
-        continue;
-      }
-
-      // 2. Est-ce que la case est libre ou occupée par un ennemi ?
-      const Piece *targetPiece = board.getPiece(target);
-
-      if (targetPiece == nullptr ||
-          targetPiece->getColor() != this->getColor()) {
-        moves.push_back(target);
-      }
-      // Si c'est un allié, on est bloqué (on ne l'ajoute pas)
-    }
-
-    return moves;
-  }
+                                          Coords pos) const override;
 
   // =========================================================
   // IMPLEMENTATION VISUELLE (Le Contrat CustomPiece)
@@ -122,4 +87,8 @@ public:
   // Mais on pourrait le surcharger ici si on voulait un Paladin toujours doré.
 
   std::string getIcon() const override { return "P"; }
+
+private:
+  mutable int lastTurnRolled = -1;
+  mutable int currentTurnBonus = 0;
 };
