@@ -1,4 +1,5 @@
 #include <cstdlib>
+#include "utils/statisticsTest.hpp"
 #include <ctime>
 #include <fstream>
 #include <iostream>
@@ -21,6 +22,7 @@
 void initGame(Game *game);
 
 int main() {
+  runStatisticalTests();
   std::srand(std::time(nullptr));
 
   std::unique_ptr<Game> game;
