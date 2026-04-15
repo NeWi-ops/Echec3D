@@ -25,11 +25,11 @@ private:
     float m_decayRate = 1.5f;
     std::vector<StrikeAnimation> recentAnimations;
 
-    void resetTimer();
 
 public:
     LightningManager();
     void update(Game& game);
+    void resetTimer();
 
     bool hasStruckRecently() const { return m_hasStruckRecently; }
     Coords getLastEpicenter() const { return lastEpicenter; }
@@ -46,5 +46,7 @@ public:
     void dismissStrike() { 
         m_hasStruckRecently = false; 
         targetHighlights.clear();
+        m_flashAlpha = 0.0f;
+        recentAnimations.clear();
     }
 };

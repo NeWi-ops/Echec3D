@@ -12,6 +12,7 @@
 
 #include "./customs/paladin.hpp"
 #include "./customs/siegeTower.hpp"
+#include "utils/StatsLogger.hpp"
 
 #include "./model/Factory/factory.hpp"
 
@@ -22,6 +23,7 @@
 void initGame(Game *game);
 
 int main() {
+  StatsLogger::instance();
   runStatisticalTests();
   std::srand(std::time(nullptr));
 
@@ -77,36 +79,31 @@ int main() {
            [&]() {
              float dt = ImGui::GetIO().DeltaTime;
 
+             // --- CLEAR SCREEN ---
+             glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+             if (!game) return;
+
              bool mouseOnUI = ImGui::GetIO().WantCaptureMouse;
 
              // --- 1. GESTION DU CLIC 3D (RAYCASTING) ---
-             // On vérifie si l'utilisateur a cliqué sur le plateau 3D
-             if (scene3D && game && renderer && !mouseOnUI) {
+             if (scene3D && renderer && !mouseOnUI) {
                auto clickedSquare = scene3D->getClickedSquare();
-
                if (clickedSquare.has_value()) {
-                 // Si clic détecté, on le traite exactement comme un clic UI
                  renderer->handleSquareClick(clickedSquare.value(), *game,
                                              scene3D.get());
                }
              }
 
-             // --- 2. NETTOYAGE ---
-             glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-             // --- 3. RENDU 3D ---
-             if (scene3D && game) {
-               // On passe maintenant la sélection et les coups possibles pour
-               // colorier les cases 3D renderer->selectedCase et
-               // renderer->possibleMoves sont maintenant publics grâce à
-               // l'étape précédente
+             // --- 2. RENDU 3D ---
+             if (scene3D) {
                scene3D->draw(*game, dt, renderer->selectedCase,
                              renderer->possibleMoves);
              }
 
-             // --- 4. RENDU UI (2D) ---
-             if (game && renderer) {
+             // --- 3. RENDU UI (2D) ---
+             if (renderer) {
                game->getLightningManager().updateVisuals(dt);
                renderer->render(*game, scene3D.get());
              }

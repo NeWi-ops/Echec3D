@@ -18,6 +18,8 @@ public:
 
   std::vector<Coords> possibleMoves;
 
+  int selectedGameMode = 0; // 0 = Classique, 1 = Paladin
+
 private:
   std::optional<Move> pendingPromotionMove = std::nullopt;
   void drawPromotionPopup(Game &game);

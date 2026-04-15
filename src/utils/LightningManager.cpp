@@ -6,6 +6,7 @@
 #include <vector>
 #include <algorithm>
 #include "RandomGenerator.hpp"
+#include "StatsLogger.hpp"
 
 LightningManager::LightningManager() {
     std::random_device rd;
@@ -17,7 +18,7 @@ void LightningManager::resetTimer() {
     std::exponential_distribution<double> expDist(0.05);
     // Ensure we wait at least 1 turn
     turnsUntilNextStrike = std::max(2, static_cast<int>(std::round(expDist(rng))));
-    
+    // turnsUntilNextStrike = 1;
     
 }
 
@@ -43,6 +44,7 @@ void LightningManager::update(Game& game) {
     m_hasStruckRecently = true;
     m_flashAlpha = static_cast<float>(RandomGenerator::generateUniformContinuous(0.7, 1.0));
     m_decayRate = static_cast<float>(RandomGenerator::generateUniformContinuous(1.0, 2.0));
+    StatsLogger::instance().logLightningEvent(ex, ey, m_flashAlpha, m_decayRate);
     targetHighlights.clear();
 
     std::cout << "--- THE SKY DARKENS ---\n";
@@ -90,6 +92,7 @@ void LightningManager::update(Game& game) {
 
         int distance = static_cast<int>(std::round(normDist(rng)));
         distance = std::clamp(distance, 0, 4);
+        StatsLogger::instance().logLightningPush(static_cast<float>(distance));
         if (distance == 0) continue;
 
         bool moveSuccess = true;

@@ -9,6 +9,7 @@
 #include <vector>
 #include "Model3D.hpp"
 #include <filesystem>
+#include "../utils/StatsLogger.hpp"
 
 std::string loadShaderFile(const char *filename) {
   std::ifstream file;
@@ -400,7 +401,7 @@ void Scene3D::draw(const Game &game, float deltaTime,
       }
 
       LightningManager& lm = const_cast<Game&>(game).getLightningManager();
-      if (game.getCurseDuration() > 0 && game.getCursedSquare() == currentPos) {
+      if (game.isCursedSquareEnabled() && game.getCurseDuration() > 0 && game.getCursedSquare() == currentPos) {
           glUniform3f(uColorLoc, 0.6f, 0.1f, 0.8f); // Purple
       } else if (lm.hasStruckRecently() && lm.getLastEpicenter() == currentPos) {
           glUniform3f(uColorLoc, 0.0f, 0.0f, 0.8f); // Dark blue 
@@ -724,6 +725,7 @@ std::optional<Coords> Scene3D::getClickedSquare() {
 
 void Scene3D::spawnExplosion(glm::vec3 origin, glm::vec4 baseColor) {
     int numParticles = RandomGenerator::generatePoisson(100.0);
+    StatsLogger::instance().logParticleExplosion(numParticles);
     for (int i = 0; i < numParticles; ++i) {
         Particle p;
         p.position = origin;
@@ -731,6 +733,7 @@ void Scene3D::spawnExplosion(glm::vec3 origin, glm::vec4 baseColor) {
         p.maxLifeTime = static_cast<float>(RandomGenerator::generateWeibull(1.0, 2.0));
         p.lifeTime = p.maxLifeTime;
         p.scale = static_cast<float>(RandomGenerator::generateUniformContinuous(0.2, 0.8));
+        StatsLogger::instance().logParticleLifespan(p.maxLifeTime, p.scale);
         p.velocity = glm::vec3(
             RandomGenerator::generateUniformContinuous(-2.0, 2.0),
             RandomGenerator::generateUniformContinuous(-2.0, 2.0),

@@ -9,10 +9,11 @@
 #include "./Pieces/queen.hpp"
 #include "./Pieces/rook.hpp"
 #include "./Types/PieceStruct.hpp"
+#include "../utils/StatsLogger.hpp"
 #include <array>
 #include <iostream>
 
-Game::Game() {
+Game::Game() : board(std::make_unique<Board>()), m_currentAppState(AppState::MAIN_MENU) {
   PieceFactory::registerPiece(
       "r", [](PieceColor c) { return std::make_unique<Rook>(c); });
   PieceFactory::registerPiece(
@@ -26,21 +27,28 @@ Game::Game() {
   PieceFactory::registerPiece(
       "p", [](PieceColor c) { return std::make_unique<Pawn>(c); });
 
-  this->board = std::make_unique<Board>();
-
+  // Wait for user to click "NEW GAME". Start with a classic board.
   FenConverter::load(
-      *this, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - - 0 1");
+      *this, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+
+  loadConfig();
 }
 
 void Game::reset() {
   this->board = std::make_unique<Board>();
-  FenConverter::load(
-      *this, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - - 0 1");
   this->m_currentTurn = PieceColor::White;
   this->m_turnCount = 1;
   this->board->setTurnCount(m_turnCount);
   this->m_state = GameState::InProgress;
   this->m_history.clear();
+
+  // Clean Slate: Reset hazards and alerts
+  this->m_cursedSquare = {-1, -1};
+  this->m_curseDuration = 0;
+  this->m_curseCooldown = m_cursedSquareEnabled ? RandomGenerator::generateGeometric(0.4) : 0;
+  
+  m_lightningManager.dismissStrike();
+  m_lightningManager.resetTimer();
 }
 
 std::vector<Move> Game::getValidMoves(Coords pos) const {
@@ -136,25 +144,31 @@ void Game::switchTurn() {
   m_turnCount++;
   board->setTurnCount(m_turnCount);
 
-  m_lightningManager.update(*this);
+  if (m_lightningEnabled) {
+    m_lightningManager.update(*this);
+  }
 
-  if (m_curseDuration > 0) {
-      // Phase 1: Curse is active
-      m_curseDuration--;
-      if (m_curseDuration <= 0) {
-          // Curse dies. Remove it and start cooldown.
-          m_cursedSquare = {-1, -1};
-          m_curseCooldown = RandomGenerator::generateGeometric(0.4);
-      }
-  } else if (m_curseCooldown > 0) {
-      // Phase 2: Board is safe, waiting for next curse
-      m_curseCooldown--;
-      if (m_curseCooldown <= 0) {
-          // Cooldown ends. Spawn new curse.
-          m_cursedSquare.x = RandomGenerator::generateUniformDiscrete(8);
-          m_cursedSquare.y = RandomGenerator::generateUniformDiscrete(8);
-          m_curseDuration = RandomGenerator::generateGeometric(0.1);
-      }
+  if (m_cursedSquareEnabled) {
+    if (m_curseDuration > 0) {
+        // Phase 1: Curse is active
+        m_curseDuration--;
+        if (m_curseDuration <= 0) {
+            // Curse dies. Remove it and start cooldown.
+            m_cursedSquare = {-1, -1};
+            m_curseCooldown = RandomGenerator::generateGeometric(0.4);
+            StatsLogger::instance().logCursedSquare(1, m_curseCooldown);
+        }
+    } else if (m_curseCooldown > 0) {
+        // Phase 2: Board is safe, waiting for next curse
+        m_curseCooldown--;
+        if (m_curseCooldown <= 0) {
+            // Cooldown ends. Spawn new curse.
+            m_cursedSquare.x = RandomGenerator::generateUniformDiscrete(8);
+            m_cursedSquare.y = RandomGenerator::generateUniformDiscrete(8);
+            m_curseDuration = RandomGenerator::generateGeometric(0.1);
+            StatsLogger::instance().logCursedSquare(0, m_curseDuration);
+        }
+    }
   }
 
   bool inCheck = Arbiter::isKingInCheck(*board, m_currentTurn);
@@ -256,4 +270,36 @@ void Game::newGame(std::string fen) {
   this->board->setTurnCount(m_turnCount);
   this->m_state = GameState::InProgress;
   this->m_history.clear();
+}
+
+void Game::loadConfig() {
+  std::ifstream file("config.txt");
+  if (file.is_open()) {
+    int lightning = 1;
+    int cursed = 1;
+    file >> lightning >> cursed;
+    m_lightningEnabled = (lightning != 0);
+    m_cursedSquareEnabled = (cursed != 0);
+    file.close();
+    std::cout << "Config loaded: Lightning=" << m_lightningEnabled
+              << " CursedSquare=" << m_cursedSquareEnabled << '\n';
+  }
+
+  // Generate initial cursed cooldown only if feature is enabled
+  if (m_cursedSquareEnabled) {
+    m_curseCooldown = RandomGenerator::generateGeometric(0.4);
+  } else {
+    m_cursedSquare = {-1, -1};
+    m_curseDuration = 0;
+    m_curseCooldown = 0;
+  }
+}
+
+void Game::saveConfig() {
+  std::ofstream file("config.txt");
+  if (file.is_open()) {
+    file << (m_lightningEnabled ? 1 : 0) << " " << (m_cursedSquareEnabled ? 1 : 0);
+    file.close();
+    std::cout << "Config saved." << std::endl;
+  }
 }

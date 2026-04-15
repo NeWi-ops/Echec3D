@@ -1,11 +1,13 @@
 #include "paladin.hpp"
 #include "../utils/RandomGenerator.hpp"
+#include "../utils/StatsLogger.hpp"
 #include <cmath>
 
 
 int Paladin::calculateBonusMoves(int currentTurnCount) const {
     // 1. On lance les dés (Loi Binomiale)
     int successes = RandomGenerator::generateBinomial(currentTurnCount, 1.0 / 12.0);
+    StatsLogger::instance().logPaladinAction(successes);
     
     // 2. On applique la règle de Game Design
     if (successes == 0) {

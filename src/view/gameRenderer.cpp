@@ -106,7 +106,7 @@ void GameRenderer::render(Game &game, Scene3D *scene3D) {
 
 void GameRenderer::drawBoard(Game &game, Scene3D *scene3D) {
   const Board &board = game.getBoard();
-  GameState state = game.getState();
+  GameState state = game.getGameState();
   PieceColor currentTurn = game.getCurrentTurn();
 
   float availX = ImGui::GetContentRegionAvail().x;
@@ -143,7 +143,7 @@ void GameRenderer::drawBoard(Game &game, Scene3D *scene3D) {
 
         // Gestion des couleurs (Echec, Sélection, Coups possibles)
         LightningManager& lm = game.getLightningManager();
-        if (game.getCurseDuration() > 0 && game.getCursedSquare() == pos) {
+        if (game.isCursedSquareEnabled() && game.getCurseDuration() > 0 && game.getCursedSquare() == pos) {
           bgCol = ImColor(150, 0, 200, 255);
         } else if (lm.hasStruckRecently() && lm.getLastEpicenter() == pos) {
           bgCol = ImVec4(0.0f, 0.0f, 0.8f, 0.9f); // Dark blue highlight for epicenter
@@ -365,6 +365,11 @@ void GameRenderer::drawHistoryWindow(Game &game) {
 }
 
 void GameRenderer::drawControlPanel(Game &game, Scene3D *scene3D) {
+  if (game.m_isFirstLaunch) {
+      ImGui::OpenPopup("Game Configuration");
+      game.m_isFirstLaunch = false;
+  }
+
   ImGui::Text("Actions :");
   ImGui::Separator();
   
@@ -419,85 +424,116 @@ void GameRenderer::drawControlPanel(Game &game, Scene3D *scene3D) {
     }
   }
 
-  // if (ImGui::Button("Recommencer la partie", ImVec2(-1, 30))) {
-  //   game.reset();
-  //   game.newGame("rnbqkbnr/"
-  //                "(Paladin:B)(Paladin:B)(Paladin:B)(Paladin:B)(Paladin:B)("
-  //                "Paladin:B)(Paladin:B)(Paladin:B)/8/8/8/8/"
-  //                "(Paladin:W)(Paladin:W)(Paladin:W)(Paladin:W)(Paladin:W)("
-  //                "Paladin:W)(Paladin:W)(Paladin:W)/RNBQKBNR w KQkq - 0 1");
-  //   selectedCase = std::nullopt;
-  //   possibleMoves.clear();
-  // }
+  // --- NEW GAME BUTTON (Triggers Modal) ---
+  ImGui::Separator();
+  ImGui::Spacing();
 
-  // --- 1. LE BOUTON DÉCLENCHEUR ---
-  if (ImGui::Button("Nouvelle Partie", ImVec2(-1, 30))) {
-    ImGui::OpenPopup("Choix du Mode"); // Ouvre la popup par son ID
+  ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.7f, 0.2f, 1.0f));
+  ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.85f, 0.3f, 1.0f));
+  ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.15f, 0.6f, 0.15f, 1.0f));
+
+  if (ImGui::Button("NEW GAME", ImVec2(-1, 35))) {
+    ImGui::OpenPopup("Game Configuration");
   }
+  ImGui::PopStyleColor(3);
 
-  // --- 2. LA POPUP MODALE ---
-  // "AlwaysAutoResize" permet à la fenêtre de s'adapter au contenu
-  bool open = true;
-  if (ImGui::BeginPopupModal("Choix du Mode", &open,
-                             ImGuiWindowFlags_AlwaysAutoResize)) {
-
-    ImGui::Text("Choisissez une configuration de depart :");
+  // --- CONFIGURATION POPUP MODAL ---
+  if (ImGui::BeginPopupModal("Game Configuration", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+    
+    ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "GAME SETTINGS");
     ImGui::Separator();
+    ImGui::Spacing();
 
-    // On affiche le nom en gras
-    ImGui::PushStyleColor(ImGuiCol_Text,
-                          ImVec4(0.4f, 0.8f, 1.0f, 1.0f)); // Vert clair
-    if (ImGui::Button("Default", ImVec2(200, 0))) {        // Bouton large
-
-      // ACTION : Charger le FEN et fermer la popup
-      game.newGame("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-      ImGui::CloseCurrentPopup();
+    // 1. CHOOSE GAME MODE
+    ImGui::Text("CHOOSE GAME MODE:");
+    {
+      const auto& scenarios = ScenarioRegistry::instance().getAll();
+      
+      if (ImGui::RadioButton("Classic", selectedGameMode == 0)) {
+        selectedGameMode = 0;
+      }
+      
+      for (int i = 0; i < static_cast<int>(scenarios.size()); ++i) {
+        bool isSelected = (selectedGameMode == i + 1);
+        if (ImGui::RadioButton(scenarios[i].name.c_str(), isSelected)) {
+          selectedGameMode = i + 1;
+        }
+        if (ImGui::IsItemHovered()) {
+          ImGui::SetTooltip("%s", scenarios[i].desc.c_str());
+        }
+      }
     }
-    ImGui::PopStyleColor();
 
-    // On affiche la description à côté ou en dessous
-    ImGui::SameLine();
-    ImGui::TextDisabled("(?)");
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    // 2. RANDOM EVENTS
+    ImGui::Text("RANDOM EVENTS:");
+    ImGui::Checkbox("Lightning Strikes", &game.m_lightningEnabled);
     if (ImGui::IsItemHovered()) {
-      ImGui::SetTooltip("%s", "Jeu de base");
+        ImGui::SetTooltip("Unpredictable strikes that wipe move history.");
+    }
+    ImGui::Checkbox("Cursed Squares", &game.m_cursedSquareEnabled);
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Squares that root pieces for a duration.");
     }
 
-    // On boucle sur tous les presets définis plus haut
-    for (const auto &preset : ScenarioRegistry::instance().getAll()) {
-
-      // On affiche le nom en gras
-      ImGui::PushStyleColor(ImGuiCol_Text,
-                            ImVec4(0.4f, 1.0f, 0.4f, 1.0f));    // Vert clair
-      if (ImGui::Button(preset.name.c_str(), ImVec2(200, 0))) { // Bouton large
-
-        // ACTION : Charger le FEN et fermer la popup
-        game.newGame(preset.fen);
-        ImGui::CloseCurrentPopup();
-      }
-      ImGui::PopStyleColor();
-
-      // On affiche la description à côté ou en dessous
-      ImGui::SameLine();
-      ImGui::TextDisabled("(?)");
-      if (ImGui::IsItemHovered()) {
-        ImGui::SetTooltip("%s", preset.desc.c_str());
-      }
-    }
-
+    ImGui::Spacing();
     ImGui::Separator();
+    ImGui::Spacing();
 
-    // Bouton Annuler
-    if (ImGui::Button("Annuler", ImVec2(120, 0))) {
+    // 4. ACTION BUTTONS (Same line)
+    float windowWidth = ImGui::GetWindowSize().x;
+    float btnWidth = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
+
+    // CANCEL
+    if (ImGui::Button("CANCEL", ImVec2(btnWidth, 35))) {
       ImGui::CloseCurrentPopup();
     }
+
+    ImGui::SameLine();
+
+    // START GAME
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.7f, 0.2f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.85f, 0.3f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.15f, 0.6f, 0.15f, 1.0f));
+
+    if (ImGui::Button("START GAME", ImVec2(btnWidth, 35))) {
+      // 1. Clean slate reset
+      game.reset();
+
+      // 2. Load selected mode
+      const auto& scenarios = ScenarioRegistry::instance().getAll();
+      if (selectedGameMode == 0) {
+        game.newGame("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+      } else {
+        int idx = selectedGameMode - 1;
+        if (idx >= 0 && idx < static_cast<int>(scenarios.size())) {
+          game.newGame(scenarios[idx].fen);
+        }
+      }
+      
+      // 3. Apply state
+      game.setAppState(AppState::PLAYING);
+      game.saveConfig();
+
+      // 4. UI Reset
+      selectedCase = std::nullopt;
+      possibleMoves.clear();
+      pendingPromotionMove = std::nullopt;
+
+      ImGui::CloseCurrentPopup();
+    }
+    ImGui::PopStyleColor(3);
 
     ImGui::EndPopup();
   }
 
-  // 333333333333333333333
-
+  ImGui::Spacing();
   ImGui::Separator();
 
+  // --- FEN Tools ---
   if (ImGui::Button("Copier FEN", ImVec2(-1, 30))) {
     std::string fen = FenConverter::save(game);
     ImGui::SetClipboardText(fen.c_str());
@@ -517,7 +553,7 @@ void GameRenderer::drawControlPanel(Game &game, Scene3D *scene3D) {
 }
 
 void GameRenderer::drawStatusWindow(Game &game) {
-  GameState state = game.getState();
+  GameState state = game.getGameState();
   PieceColor turn = game.getCurrentTurn();
 
   float windowWidth = ImGui::GetContentRegionAvail().x;
@@ -606,6 +642,10 @@ void GameRenderer::drawStatusWindow(Game &game) {
 
 // --- NOUVELLE FONCTION CENTRALISÉE POUR LE CLIC (UI & 3D) ---
 bool GameRenderer::handleSquareClick(Coords pos, Game &game, Scene3D *scene3D) {
+  if (game.getAppState() != AppState::PLAYING) {
+      return false; // Block interaction in MAIN_MENU
+  }
+
   if (scene3D && scene3D->isAnimationPlaying()) {
       return false; // Block user input
   }
