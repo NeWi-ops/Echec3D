@@ -4,6 +4,17 @@
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 #include "AssetManager.hpp"
+#include "../utils/RandomGenerator.hpp"
+
+struct Particle {
+    glm::vec3 position;
+    glm::vec3 velocity;
+    float lifeTime;
+    float maxLifeTime;
+    glm::vec4 color;
+    float scale;
+};
+
 
 class Scene3D {
 public:
@@ -20,6 +31,9 @@ public:
   bool isAnimationPlaying() const;
 
   std::optional<Coords> getClickedSquare();
+  
+  void spawnExplosion(glm::vec3 origin, glm::vec4 baseColor);
+  void updateParticles(float deltaTime);
 
 private:
   unsigned int skyboxShader;
@@ -72,4 +86,5 @@ private:
   glm::mat4 lastView;
 
   bool isClicking = false;
+  std::vector<Particle> m_particles;
 };

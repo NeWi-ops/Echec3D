@@ -4,6 +4,7 @@
 #include "./Types/GameStateEnum.hpp"
 #include "Board/board.hpp"
 #include "../utils/LightningManager.hpp"
+#include "../utils/RandomGenerator.hpp"
 #include <array>
 #include <iostream>
 
@@ -15,12 +16,16 @@ private:
   GameState m_state = GameState::InProgress;
   std::vector<Move> m_history;
   LightningManager m_lightningManager;
+  Coords m_cursedSquare = {-1, -1};
+  int m_curseDuration = 0;
+  int m_curseCooldown = RandomGenerator::generateGeometric(0.4);
 
 public:
   Game();
   ~Game() = default;
 
   bool playMove(const Move &move);
+  std::vector<Move> getValidMoves(Coords pos) const;
 
   void switchTurn();
 
@@ -35,6 +40,10 @@ public:
   const std::vector<Move> &getHistory() const { return m_history; }
   void clearHistory() { m_history.clear(); }
   LightningManager& getLightningManager() { return m_lightningManager; }
+
+  const Coords& getCursedSquare() const { return m_cursedSquare; }
+  int getCurseDuration() const { return m_curseDuration; }
+  int getCurseCooldown() const { return m_curseCooldown; }
 
   void resetState(std::unique_ptr<Board> newBoard, PieceColor turn) {
     this->board = std::move(newBoard);

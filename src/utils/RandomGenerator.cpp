@@ -49,7 +49,7 @@ namespace RandomGenerator {
 
     int generateUniformDiscrete(int n) {
         double u = getRandomU();
-        return static_cast<int>(std::floor(u * n)) + 1;
+        return static_cast<int>(std::floor(u * n));
     }
 
     int generateBinomial(int n, double p) {

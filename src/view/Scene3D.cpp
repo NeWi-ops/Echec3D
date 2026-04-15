@@ -158,6 +158,7 @@ void Scene3D::init() {
         uniform vec3 uViewPos;
         uniform bool uUseTexture;
         uniform sampler2D uTex;
+        uniform float uAlpha;
 
         void main() {
             vec3 color = uColor;
@@ -182,7 +183,7 @@ void Scene3D::init() {
             float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
             vec3 specular = 0.5 * spec * vec3(1.0);  
             vec3 result = (ambient + diffuse + specular) * color;
-            FragColor = vec4(result, 1.0);
+            FragColor = vec4(result, uAlpha);
         }
     )";
 
@@ -314,6 +315,10 @@ void Scene3D::draw(const Game &game, float deltaTime,
   glUseProgram(shaderProgram);
   glBindVertexArray(VAO);
 
+  // Set default alpha to 1.0
+  int uAlphaLoc = glGetUniformLocation(shaderProgram, "uAlpha");
+  glUniform1f(uAlphaLoc, 1.0f);
+
   // 2. GESTION ANIMATION
   if (isAnimating) {
     animProgress += animSpeed * deltaTime;
@@ -395,7 +400,9 @@ void Scene3D::draw(const Game &game, float deltaTime,
       }
 
       LightningManager& lm = const_cast<Game&>(game).getLightningManager();
-      if (lm.hasStruckRecently() && lm.getLastEpicenter() == currentPos) {
+      if (game.getCurseDuration() > 0 && game.getCursedSquare() == currentPos) {
+          glUniform3f(uColorLoc, 0.6f, 0.1f, 0.8f); // Purple
+      } else if (lm.hasStruckRecently() && lm.getLastEpicenter() == currentPos) {
           glUniform3f(uColorLoc, 0.0f, 0.0f, 0.8f); // Dark blue 
       } else if (lm.hasStruckRecently() && std::find(lm.getTargetHighlights().begin(), lm.getTargetHighlights().end(), currentPos) != lm.getTargetHighlights().end()) {
           glUniform3f(uColorLoc, 1.0f, 1.0f, 0.0f); // Yellow
@@ -583,6 +590,26 @@ void Scene3D::draw(const Game &game, float deltaTime,
       }
   }
 
+  // 9. DESSIN DES PARTICULES
+  updateParticles(deltaTime);
+  
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  glUniform1i(uUseTextureLoc, 0);
+  
+  for (const auto& p : m_particles) {
+      glm::mat4 model = glm::mat4(1.0f);
+      model = glm::translate(model, p.position);
+      model = glm::scale(model, glm::vec3(p.scale * 0.1f));
+      glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+      glUniform3f(uColorLoc, p.color.r, p.color.g, p.color.b);
+      glUniform1f(uAlphaLoc, p.color.a);
+      glDrawArrays(GL_TRIANGLES, 0, 36);
+  }
+  
+  glDisable(GL_BLEND);
+  glUniform1f(uAlphaLoc, 1.0f); // Reset alpha
+
   glDepthFunc(GL_LEQUAL);
 
   // B. On change de Shader
@@ -694,3 +721,48 @@ std::optional<Coords> Scene3D::getClickedSquare() {
 
   return std::nullopt;
 }
+
+void Scene3D::spawnExplosion(glm::vec3 origin, glm::vec4 baseColor) {
+    int numParticles = RandomGenerator::generatePoisson(100.0);
+    for (int i = 0; i < numParticles; ++i) {
+        Particle p;
+        p.position = origin;
+        p.color = baseColor;
+        p.maxLifeTime = static_cast<float>(RandomGenerator::generateWeibull(1.0, 2.0));
+        p.lifeTime = p.maxLifeTime;
+        p.scale = static_cast<float>(RandomGenerator::generateUniformContinuous(0.2, 0.8));
+        p.velocity = glm::vec3(
+            RandomGenerator::generateUniformContinuous(-2.0, 2.0),
+            RandomGenerator::generateUniformContinuous(-2.0, 2.0),
+            RandomGenerator::generateUniformContinuous(-2.0, 2.0)
+        );
+        m_particles.push_back(p);
+    }
+}
+
+void Scene3D::updateParticles(float deltaTime) {
+    for (auto it = m_particles.begin(); it != m_particles.end(); ) {
+        it->position += it->velocity * deltaTime;
+        it->velocity.y -= 15.0f * deltaTime;
+        
+        if (it->position.y < 0.0f) { 
+            it->position.y = 0.0f; 
+            it->velocity.y *= -0.3f; 
+            it->velocity.x *= 0.5f; 
+            it->velocity.z *= 0.5f; 
+        }
+
+        it->lifeTime -= deltaTime;
+        
+        if (it->maxLifeTime > 0.0f) {
+            it->color.a = std::max(0.0f, it->lifeTime / it->maxLifeTime);
+        }
+
+        if (it->lifeTime <= 0.0f) {
+            it = m_particles.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
+

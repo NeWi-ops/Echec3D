@@ -143,7 +143,9 @@ void GameRenderer::drawBoard(Game &game, Scene3D *scene3D) {
 
         // Gestion des couleurs (Echec, Sélection, Coups possibles)
         LightningManager& lm = game.getLightningManager();
-        if (lm.hasStruckRecently() && lm.getLastEpicenter() == pos) {
+        if (game.getCurseDuration() > 0 && game.getCursedSquare() == pos) {
+          bgCol = ImColor(150, 0, 200, 255);
+        } else if (lm.hasStruckRecently() && lm.getLastEpicenter() == pos) {
           bgCol = ImVec4(0.0f, 0.0f, 0.8f, 0.9f); // Dark blue highlight for epicenter
         } else if (lm.hasStruckRecently() && std::find(lm.getTargetHighlights().begin(), lm.getTargetHighlights().end(), pos) != lm.getTargetHighlights().end()) {
           bgCol = ImVec4(1.0f, 1.0f, 0.0f, 0.9f); // Bright yellow highlight for affected targets
@@ -365,12 +367,20 @@ void GameRenderer::drawHistoryWindow(Game &game) {
 void GameRenderer::drawControlPanel(Game &game, Scene3D *scene3D) {
   ImGui::Text("Actions :");
   ImGui::Separator();
+  
+  bool disableUndo = game.getLightningManager().hasStruckRecently() || game.getHistory().empty();
+  if (disableUndo) ImGui::BeginDisabled();
+  
   if (ImGui::Button("Annuler le coup", ImVec2(-1, 30))) {
-    game.undoLastMove();
-    selectedCase = std::nullopt;
-    possibleMoves.clear();
-    pendingPromotionMove = std::nullopt;
+    if (!game.getLightningManager().hasStruckRecently()) {
+        game.undoLastMove();
+        selectedCase = std::nullopt;
+        possibleMoves.clear();
+        pendingPromotionMove = std::nullopt;
+    }
   }
+  
+  if (disableUndo) ImGui::EndDisabled();
 
   if (ImGui::Button("Faire jouer l'IA", ImVec2(-1, 30))) {
     Move bestMove =
@@ -389,6 +399,12 @@ void GameRenderer::drawControlPanel(Game &game, Scene3D *scene3D) {
     if (success) {
       std::cout << "UI: Coup accepté et joué !" << std::endl;
       if (scene3D) {
+        if (game.getHistory().back().capturedPiece.has_value()) {
+            PieceColor capCol = game.getCurrentTurn(); // Since turn changed, currentTurn is the captured piece's color
+            glm::vec4 expColor = (capCol == PieceColor::White) ? glm::vec4(1.0f, 0.9f, 0.8f, 1.0f) : glm::vec4(0.1f, 0.1f, 0.1f, 1.0f);
+            scene3D->spawnExplosion(glm::vec3(bestMove.to.x, 0.5f, bestMove.to.y), expColor);
+        }
+
         PieceColor movedColor = (game.getCurrentTurn() == PieceColor::White)
                                     ? PieceColor::Black
                                     : PieceColor::White;
@@ -575,6 +591,17 @@ void GameRenderer::drawStatusWindow(Game &game) {
           ImGui::PopStyleColor();
       }
   }
+
+  ImGui::Separator();
+
+  int duration = game.getCurseDuration();
+  int cooldown = game.getCurseCooldown();
+  if (duration > 0) {
+      Coords cursed = game.getCursedSquare();
+      ImGui::TextColored(ImVec4(0.6f, 0.0f, 0.8f, 1.0f), "⚠️ Case Maudite en [%d,%d] (Durée: %d tours)", cursed.x, cursed.y, duration);
+  } else if (cooldown > 0) {
+      ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "Calme avant la tempête (Prochaine malédiction dans %d tours)", cooldown);
+  }
 }
 
 // --- NOUVELLE FONCTION CENTRALISÉE POUR LE CLIC (UI & 3D) ---
@@ -592,7 +619,7 @@ bool GameRenderer::handleSquareClick(Coords pos, Game &game, Scene3D *scene3D) {
     if (p && p->getColor() == currentTurn) {
       selectedCase = pos;
       possibleMoves.clear();
-      auto moves = Arbiter::getLegalMoves(board, pos);
+      auto moves = game.getValidMoves(pos);
       for (const auto &m : moves)
         possibleMoves.push_back(m.to);
     }
@@ -634,6 +661,12 @@ bool GameRenderer::handleSquareClick(Coords pos, Game &game, Scene3D *scene3D) {
       // Coup normal (inchangé)
       if (game.playMove(moveAttempt)) {
         if (scene3D) {
+          if (game.getHistory().back().capturedPiece.has_value()) {
+              PieceColor capCol = game.getCurrentTurn();
+              glm::vec4 expColor = (capCol == PieceColor::White) ? glm::vec4(1.0f, 0.9f, 0.8f, 1.0f) : glm::vec4(0.1f, 0.1f, 0.1f, 1.0f);
+              scene3D->spawnExplosion(glm::vec3(pos.x, 0.5f, pos.y), expColor);
+          }
+
           PieceColor movedColor = (game.getCurrentTurn() == PieceColor::White)
                                       ? PieceColor::Black
                                       : PieceColor::White;
@@ -648,7 +681,7 @@ bool GameRenderer::handleSquareClick(Coords pos, Game &game, Scene3D *scene3D) {
         if (pNew && pNew->getColor() == currentTurn) {
           selectedCase = pos;
           possibleMoves.clear();
-          auto moves = Arbiter::getLegalMoves(board, pos);
+          auto moves = game.getValidMoves(pos);
           for (const auto &m : moves)
             possibleMoves.push_back(m.to);
         } else {

@@ -22,6 +22,7 @@ private:
     bool m_hasStruckRecently = false;
     std::vector<Coords> targetHighlights;
     float m_flashAlpha = 0.0f;
+    float m_decayRate = 1.5f;
     std::vector<StrikeAnimation> recentAnimations;
 
     void resetTimer();

@@ -43,13 +43,32 @@ void Game::reset() {
   this->m_history.clear();
 }
 
+std::vector<Move> Game::getValidMoves(Coords pos) const {
+    const Piece *piece = board->getPiece(pos);
+    if (!piece) return {};
+
+    if (m_curseDuration > 0 && pos.x == m_cursedSquare.x && pos.y == m_cursedSquare.y) {
+        if (piece->getType() != PieceType::King) {
+            return {}; // Return an empty vector/list. The piece is rooted.
+        }
+    }
+    return Arbiter::getLegalMoves(*board, pos);
+}
+
 bool Game::playMove(const Move &moveInput) {
+  m_lightningManager.dismissStrike();
 
   const Piece *p = board->getPiece(moveInput.from);
   if (!p || p->getColor() != m_currentTurn)
     return false;
 
-  std::vector<Move> legalMoves = Arbiter::getLegalMoves(*board, moveInput.from);
+  if (m_curseDuration > 0 && moveInput.from.x == m_cursedSquare.x && moveInput.from.y == m_cursedSquare.y) {
+      if (p->getType() != PieceType::King) {
+          return false;
+      }
+  }
+
+  std::vector<Move> legalMoves = getValidMoves(moveInput.from);
 
   bool isLegal = false;
   Move moveExecuter = moveInput;
@@ -119,6 +138,25 @@ void Game::switchTurn() {
 
   m_lightningManager.update(*this);
 
+  if (m_curseDuration > 0) {
+      // Phase 1: Curse is active
+      m_curseDuration--;
+      if (m_curseDuration <= 0) {
+          // Curse dies. Remove it and start cooldown.
+          m_cursedSquare = {-1, -1};
+          m_curseCooldown = RandomGenerator::generateGeometric(0.4);
+      }
+  } else if (m_curseCooldown > 0) {
+      // Phase 2: Board is safe, waiting for next curse
+      m_curseCooldown--;
+      if (m_curseCooldown <= 0) {
+          // Cooldown ends. Spawn new curse.
+          m_cursedSquare.x = RandomGenerator::generateUniformDiscrete(8);
+          m_cursedSquare.y = RandomGenerator::generateUniformDiscrete(8);
+          m_curseDuration = RandomGenerator::generateGeometric(0.1);
+      }
+  }
+
   bool inCheck = Arbiter::isKingInCheck(*board, m_currentTurn);
   bool hasMoves = Arbiter::hasLegalMoves(*board, m_currentTurn);
 
@@ -140,6 +178,9 @@ void Game::switchTurn() {
 void Game::undoLastMove() {
 
   if (m_history.empty())
+    return;
+    
+  if (m_lightningManager.hasStruckRecently())
     return;
 
   Move lastMove = m_history.back();

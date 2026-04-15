@@ -5,6 +5,7 @@
 #include <cmath>
 #include <vector>
 #include <algorithm>
+#include "RandomGenerator.hpp"
 
 LightningManager::LightningManager() {
     std::random_device rd;
@@ -13,15 +14,16 @@ LightningManager::LightningManager() {
 }
 
 void LightningManager::resetTimer() {
-    std::exponential_distribution<double> expDist(0.1);
+    std::exponential_distribution<double> expDist(0.05);
     // Ensure we wait at least 1 turn
-    turnsUntilNextStrike = std::max(1, static_cast<int>(std::round(expDist(rng))));
+    turnsUntilNextStrike = std::max(2, static_cast<int>(std::round(expDist(rng))));
+    
     
 }
 
 void LightningManager::updateVisuals(float deltaTime) {
     if (m_flashAlpha > 0.0f) {
-        m_flashAlpha -= deltaTime * 1.5f;
+        m_flashAlpha -= deltaTime * m_decayRate;
         if (m_flashAlpha < 0.0f) m_flashAlpha = 0.0f;
     }
 }
@@ -37,10 +39,10 @@ void LightningManager::update(Game& game) {
     std::uniform_int_distribution<int> uniDist(0, 7);
     int ex = uniDist(rng);
     int ey = uniDist(rng);
-    
     lastEpicenter = {ex, ey};
     m_hasStruckRecently = true;
-    m_flashAlpha = 1.0f;
+    m_flashAlpha = static_cast<float>(RandomGenerator::generateUniformContinuous(0.7, 1.0));
+    m_decayRate = static_cast<float>(RandomGenerator::generateUniformContinuous(1.0, 2.0));
     targetHighlights.clear();
 
     std::cout << "--- THE SKY DARKENS ---\n";
@@ -144,10 +146,8 @@ void LightningManager::update(Game& game) {
         }
     }
 
-    if (modifiedBoard) {
-        std::cout << "The blast reshaped the battlefield! History is wiped.\n";
-        game.clearHistory();
-    }
+    std::cout << "Lightning struck! History is wiped.\n";
+    game.clearHistory();
 
     resetTimer();
 }
