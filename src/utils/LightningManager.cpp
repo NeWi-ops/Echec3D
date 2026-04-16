@@ -15,28 +15,25 @@ LightningManager::LightningManager() {
 }
 
 void LightningManager::resetTimer() {
-    std::exponential_distribution<double> expDist(0.05);
-    // Ensure we wait at least 1 turn
-    turnsUntilNextStrike = std::max(2, static_cast<int>(std::round(expDist(rng))));
-    // turnsUntilNextStrike = 1;
-    
+    std::exponential_distribution<float> expDist(1.0f / 90.0f); 
+    m_timeUntilNextStrike = std::max(10.0f, expDist(rng));        
 }
 
-void LightningManager::updateVisuals(float deltaTime) {
+void LightningManager::update(float deltaTime, Game& game) {
+    // --- Part 1: Visual decay (flash fading) ---
     if (m_flashAlpha > 0.0f) {
         m_flashAlpha -= deltaTime * m_decayRate;
         if (m_flashAlpha < 0.0f) m_flashAlpha = 0.0f;
     }
-}
 
-void LightningManager::update(Game& game) {
-    turnsUntilNextStrike--;
-    
-    if (turnsUntilNextStrike > 0) {
+    // --- Part 2: Real-time countdown ---
+    m_timeUntilNextStrike -= deltaTime;
+
+    if (m_timeUntilNextStrike > 0.0f) {
         return;
     }
 
-    // Strike!
+    // --- Part 3: Strike! ---
     std::uniform_int_distribution<int> uniDist(0, 7);
     int ex = uniDist(rng);
     int ey = uniDist(rng);

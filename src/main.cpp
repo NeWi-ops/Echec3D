@@ -103,8 +103,10 @@ int main() {
              }
 
              // --- 3. RENDU UI (2D) ---
-             if (renderer) {
-               game->getLightningManager().updateVisuals(dt);
+            if (renderer) {
+               if (game->m_lightningEnabled) {
+                   game->getLightningManager().update(dt, *game);
+               }
                renderer->render(*game, scene3D.get());
              }
            }});

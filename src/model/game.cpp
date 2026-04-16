@@ -144,9 +144,7 @@ void Game::switchTurn() {
   m_turnCount++;
   board->setTurnCount(m_turnCount);
 
-  if (m_lightningEnabled) {
-    m_lightningManager.update(*this);
-  }
+
 
   if (m_cursedSquareEnabled) {
     if (m_curseDuration > 0) {
