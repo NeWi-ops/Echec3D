@@ -5,29 +5,25 @@ out vec4 FragColor;
 in vec3 FragPos;
 in vec3 Normal;
 
-uniform vec3 uColor;     // Couleur de l'objet (Rouge/Bleu/Blanc...)
-uniform vec3 uLightDir;  // Direction du soleil
-uniform vec3 uViewPos;   // Position de la caméra (pour le reflet)
+uniform vec3 uColor;     
+uniform vec3 uLightDir;  
+uniform vec3 uViewPos;   
 
 void main() {
-    // 1. Ambiante (Lumière de fond)
     float ambientStrength = 0.3;
     vec3 ambient = ambientStrength * vec3(1.0, 1.0, 1.0);
   
-    // 2. Diffuse (Soleil)
     vec3 norm = normalize(Normal);
-    vec3 lightDir = normalize(-uLightDir); // On inverse car c'est une direction, pas une position
+    vec3 lightDir = normalize(-uLightDir); 
     float diff = max(dot(norm, lightDir), 0.0);
     vec3 diffuse = diff * vec3(1.0, 1.0, 1.0);
     
-    // 3. Spéculaire (Reflet brillant)
     float specularStrength = 0.5;
     vec3 viewDir = normalize(uViewPos - FragPos);
     vec3 reflectDir = reflect(-lightDir, norm);  
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32); // 32 = brillance
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32); 
     vec3 specular = specularStrength * spec * vec3(1.0, 1.0, 1.0);  
 
-    // Résultat final
     vec3 result = (ambient + diffuse + specular) * uColor;
     FragColor = vec4(result, 1.0);
 }

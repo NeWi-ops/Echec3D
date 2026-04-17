@@ -18,7 +18,7 @@ public:
 
   std::vector<Coords> possibleMoves;
 
-  int selectedGameMode = 0; // 0 = Classique, 1 = Paladin
+  int selectedGameMode = 0; 
 
 private:
   std::optional<Move> pendingPromotionMove = std::nullopt;

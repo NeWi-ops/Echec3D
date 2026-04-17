@@ -79,7 +79,6 @@ int main() {
            [&]() {
              float dt = ImGui::GetIO().DeltaTime;
 
-             // --- CLEAR SCREEN ---
              glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
              glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -87,7 +86,6 @@ int main() {
 
              bool mouseOnUI = ImGui::GetIO().WantCaptureMouse;
 
-             // --- 1. GESTION DU CLIC 3D (RAYCASTING) ---
              if (scene3D && renderer && !mouseOnUI) {
                auto clickedSquare = scene3D->getClickedSquare();
                if (clickedSquare.has_value()) {
@@ -96,13 +94,11 @@ int main() {
                }
              }
 
-             // --- 2. RENDU 3D ---
              if (scene3D) {
                scene3D->draw(*game, dt, renderer->selectedCase,
                              renderer->possibleMoves);
              }
 
-             // --- 3. RENDU UI (2D) ---
             if (renderer) {
                if (game->m_lightningEnabled) {
                    game->getLightningManager().update(dt, *game);
@@ -115,7 +111,6 @@ int main() {
 }
 
 void initGame(Game *game) {
-  // GameRegistry.cpp
   PieceFactory::registerPiece(
       "Paladin", [](PieceColor c) { return std::make_unique<Paladin>(c); });
 
@@ -127,7 +122,6 @@ void initGame(Game *game) {
     return std::make_unique<SiegeTower>(c);
   });
 
-  // Enregistrement des scénarios (Optionnel)
   for (const auto &s : SiegeTower::getAddonScenarios()) {
     ScenarioRegistry::instance().add(s.name, s.desc, s.fen);
   }

@@ -28,8 +28,6 @@ std::string loadShaderFile(const char *filename) {
   return ret;
 }
 float cubeVertices[] = {
-    // positions           // normales          // texcoords
-    // Face Arrière
     -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
      0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 0.0f,
      0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
@@ -37,7 +35,6 @@ float cubeVertices[] = {
     -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 1.0f,
     -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
 
-    // Face Avant
     -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 0.0f,
      0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f, 0.0f,
      0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f, 1.0f,
@@ -45,7 +42,6 @@ float cubeVertices[] = {
     -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 1.0f,
     -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 0.0f,
 
-    // Face Gauche
     -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
     -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
     -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
@@ -53,7 +49,6 @@ float cubeVertices[] = {
     -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
     -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
 
-    // Face Droite
      0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
      0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
      0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
@@ -61,7 +56,6 @@ float cubeVertices[] = {
      0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
      0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
 
-    // Face Bas
     -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
      0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 1.0f,
      0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
@@ -69,7 +63,6 @@ float cubeVertices[] = {
     -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 0.0f,
     -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
 
-    // Face Haut
     -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f,
      0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 1.0f,
      0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
@@ -191,11 +184,6 @@ void Scene3D::init() {
   unsigned int vs = compileShader(GL_VERTEX_SHADER, vsCode);
   unsigned int fs = compileShader(GL_FRAGMENT_SHADER, fsCode);
 
-  // Sécurité : si le fichier est vide ou pas trouvé, on évite le crash moche
-
-  // 2. COMPILATION
-  // On doit convertir std::string en const char* pour OpenGL
-
   shaderProgram = glCreateProgram();
   glAttachShader(shaderProgram, vs);
   glAttachShader(shaderProgram, fs);
@@ -211,16 +199,13 @@ void Scene3D::init() {
   glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices,
                GL_STATIC_DRAW);
 
-  // 1. POSITION (Location 0)
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)0);
   glEnableVertexAttribArray(0);
 
-  // 2. NORMALES (Location 1)
   glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
                         (void *)(3 * sizeof(float)));
   glEnableVertexAttribArray(1);
 
-  // 3. TEXCOORDS (Location 2)
   glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
                         (void *)(6 * sizeof(float)));
   glEnableVertexAttribArray(2);
@@ -235,28 +220,21 @@ void Scene3D::init() {
   modelQueen  = assetManager.getModel("ressources/models/queen.obj");
   modelKing   = assetManager.getModel("ressources/models/king.obj");
   float skyboxVertices[] = {
-      // Positions
-      // Face Arrière (Back)
       -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f,
       -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f,
 
-      // Face Gauche (Left)
       -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f,
       -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f,
 
-      // Face Droite (Right)
       1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
       1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f,
 
-      // Face Avant (Front)
       -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
       1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f,
 
-      // Face Haut (Top)
       -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
       -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f,
 
-      // Face Bas (Bottom)
       -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f,
       -1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f};
 
@@ -310,17 +288,13 @@ void Scene3D::draw(const Game &game, float deltaTime,
                    std::optional<Coords> selectedCase,
                    const std::vector<Coords> &possibleMoves) {
 
-  // 1. SETUP DE BASE
   glEnable(GL_DEPTH_TEST);
 
   glUseProgram(shaderProgram);
   glBindVertexArray(VAO);
-
-  // Set default alpha to 1.0
   int uAlphaLoc = glGetUniformLocation(shaderProgram, "uAlpha");
   glUniform1f(uAlphaLoc, 1.0f);
 
-  // 2. GESTION ANIMATION
   if (isAnimating) {
     animProgress += animSpeed * deltaTime;
     if (animProgress >= 1.0f) {
@@ -330,7 +304,7 @@ void Scene3D::draw(const Game &game, float deltaTime,
   }
   for (auto& anim : activeAnimations) {
       if (anim.active) {
-          anim.progress += animSpeed * 0.5f * deltaTime; // Slower for sequences
+          anim.progress += animSpeed * 0.5f * deltaTime; 
           if (anim.progress >= 1.0f) {
               anim.progress = 1.0f;
               anim.active = false;
@@ -341,7 +315,6 @@ void Scene3D::draw(const Game &game, float deltaTime,
                          [](const AnimState& a){ return !a.active; }),
                          activeAnimations.end());
 
-  // 3. CAMÉRA & INPUTS
   updateCameraInput();
 
   glm::vec3 camPos;
@@ -352,7 +325,6 @@ void Scene3D::draw(const Game &game, float deltaTime,
   camPos.y = camTarget.y + camDistance * sin(pitchRad);
   camPos.z = camTarget.z + camDistance * cos(pitchRad) * sin(yawRad);
 
-  // 4. PROJECTION (Ratio écran)
   ImGuiIO &io = ImGui::GetIO();
   float width = io.DisplaySize.x;
   float height = io.DisplaySize.y;
@@ -366,7 +338,6 @@ void Scene3D::draw(const Game &game, float deltaTime,
   lastProjection = projection;
   lastView = view;
 
-  // 5. RÉCUPÉRATION DES UNIFORMS
   int modelLoc = glGetUniformLocation(shaderProgram, "model");
   int viewLoc = glGetUniformLocation(shaderProgram, "view");
   int projLoc = glGetUniformLocation(shaderProgram, "projection");
@@ -374,20 +345,16 @@ void Scene3D::draw(const Game &game, float deltaTime,
   int uColorLoc = glGetUniformLocation(shaderProgram, "uColor");
   int uLightDirLoc = glGetUniformLocation(shaderProgram, "uLightDir");
   int uViewPosLoc = glGetUniformLocation(shaderProgram, "uViewPos");
-  int uUseTextureLoc = glGetUniformLocation(shaderProgram, "uUseTexture"); // Ajout variable texturage
+  int uUseTextureLoc = glGetUniformLocation(shaderProgram, "uUseTexture"); 
 
-  // 6. ENVOI DES DONNÉES GLOBALES
   glUniform3f(uLightDirLoc, -0.5f, -1.0f, -0.5f);
   glUniform3f(uViewPosLoc, camPos.x, camPos.y, camPos.z);
   glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
   glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
-  // 7. BOUCLE D'AFFICHAGE (Plateau + Pièces)
   for (int y = 0; y < 8; y++) {
     for (int x = 0; x < 8; x++) {
       Coords currentPos{x, y};
-
-      // --- A. LE SOL (CASE) ---
       glm::mat4 model = glm::mat4(1.0f);
       model = glm::translate(model, glm::vec3(x, 0.0f, y));
       model = glm::scale(model, glm::vec3(0.95f, 0.1f, 0.95f));
@@ -402,25 +369,24 @@ void Scene3D::draw(const Game &game, float deltaTime,
 
       LightningManager& lm = const_cast<Game&>(game).getLightningManager();
       if (game.isCursedSquareEnabled() && game.getCurseDuration() > 0 && game.getCursedSquare() == currentPos) {
-          glUniform3f(uColorLoc, 0.6f, 0.1f, 0.8f); // Purple
+          glUniform3f(uColorLoc, 0.6f, 0.1f, 0.8f); 
       } else if (lm.hasStruckRecently() && lm.getLastEpicenter() == currentPos) {
-          glUniform3f(uColorLoc, 0.0f, 0.0f, 0.8f); // Dark blue 
+          glUniform3f(uColorLoc, 0.0f, 0.0f, 0.8f); 
       } else if (lm.hasStruckRecently() && std::find(lm.getTargetHighlights().begin(), lm.getTargetHighlights().end(), currentPos) != lm.getTargetHighlights().end()) {
-          glUniform3f(uColorLoc, 1.0f, 1.0f, 0.0f); // Yellow
+          glUniform3f(uColorLoc, 1.0f, 1.0f, 0.0f); 
       } else if (selectedCase.has_value() && selectedCase.value() == currentPos) {
-          glUniform3f(uColorLoc, 0.4f, 1.0f, 0.4f); // Vert clair
+          glUniform3f(uColorLoc, 0.4f, 1.0f, 0.4f); 
       } else if (std::find(possibleMoves.begin(), possibleMoves.end(), currentPos) != possibleMoves.end()) {
-          glUniform3f(uColorLoc, 0.6f, 0.8f, 1.0f); // Bleu clair
+          glUniform3f(uColorLoc, 0.6f, 0.8f, 1.0f); 
       } else {
-          glUniform3f(uColorLoc, 1.0f, 1.0f, 1.0f); // Neutre
+          glUniform3f(uColorLoc, 1.0f, 1.0f, 1.0f); 
       }
       
       glDrawArrays(GL_TRIANGLES, 0, 36);
 
-      glUniform1i(uUseTextureLoc, 0); // Disable texture for pieces
-      glBindTexture(GL_TEXTURE_2D, whiteTileTex); // Bind to a valid texture to prevent null descriptor crash
+      glUniform1i(uUseTextureLoc, 0); 
+      glBindTexture(GL_TEXTURE_2D, whiteTileTex); 
 
-      // --- B. LA PIÈCE (STATIQUE) ---
       const Piece *p = game.getBoard().getPiece(x, y);
 
       if (p) {
@@ -591,7 +557,6 @@ void Scene3D::draw(const Game &game, float deltaTime,
       }
   }
 
-  // 9. DESSIN DES PARTICULES
   updateParticles(deltaTime);
   
   glEnable(GL_BLEND);
@@ -609,14 +574,12 @@ void Scene3D::draw(const Game &game, float deltaTime,
   }
   
   glDisable(GL_BLEND);
-  glUniform1f(uAlphaLoc, 1.0f); // Reset alpha
+  glUniform1f(uAlphaLoc, 1.0f); 
 
   glDepthFunc(GL_LEQUAL);
 
-  // B. On change de Shader
   glUseProgram(skyboxShader);
 
-  // C. On prépare la vue (sans translation)
   glm::mat4 skyView = glm::mat4(glm::mat3(view));
 
   glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "view"), 1, GL_FALSE,
@@ -624,20 +587,17 @@ void Scene3D::draw(const Game &game, float deltaTime,
   glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "projection"), 1,
                      GL_FALSE, glm::value_ptr(projection));
 
-  // D. On change de VAO (Important !)
   glBindVertexArray(skyboxVAO);
 
-  // E. On bind la texture (si tu en as une, sinon code couleur shader)
   glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
 
   glDrawArrays(GL_TRIANGLES, 0, 36);
 
-  // F. On remet tout propre
   glBindVertexArray(0);
-  glDepthFunc(GL_LESS); // Retour à la normale pour la prochaine frame
+  glDepthFunc(GL_LESS); 
 
   glBindVertexArray(0);
-} // FIN PARFAITE DE LA FONCTION DRAW
+}
 
 void Scene3D::triggerMoveAnimation(Coords from, Coords to, PieceType type, PieceColor color) {
   isAnimating = true;
@@ -667,13 +627,9 @@ bool Scene3D::isAnimationPlaying() const {
 std::optional<Coords> Scene3D::getClickedSquare() {
   ImGuiIO &io = ImGui::GetIO();
 
-  // Ne pas cliquer si la souris est sur une fenêtre ImGui (comme ton
-  // historique)
   if (io.WantCaptureMouse || !ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
     return std::nullopt;
   }
-
-  // 1. Coordonnées de la souris (0 à 1)
   float mouseX = io.MousePos.x;
   float mouseY = io.MousePos.y;
   float width = io.DisplaySize.x;
@@ -682,11 +638,9 @@ std::optional<Coords> Scene3D::getClickedSquare() {
   if (width <= 0.001f) width = 1.0f;
   if (height <= 0.001f) height = 1.0f;
 
-  // 2. Conversion en NDC (-1 à 1)
   float x = (2.0f * mouseX) / width - 1.0f;
-  float y = 1.0f - (2.0f * mouseY) / height; // Inversé en OpenGL
+  float y = 1.0f - (2.0f * mouseY) / height; 
 
-  // 3. Création du rayon en espace monde
   glm::mat4 invVP = glm::inverse(lastProjection * lastView);
   glm::vec4 screenPosNear(x, y, -1.0f, 1.0f);
   glm::vec4 screenPosFar(x, y, 1.0f, 1.0f);
@@ -700,19 +654,14 @@ std::optional<Coords> Scene3D::getClickedSquare() {
   glm::vec3 rayOrigin = glm::vec3(worldPosNear);
   glm::vec3 rayDir = glm::normalize(glm::vec3(worldPosFar) - rayOrigin);
 
-  // 4. Intersection Rayon / Plan (y = 0)
-  // Formule : t = -origin.y / dir.y
   if (std::abs(rayDir.y) < 0.0001f)
-    return std::nullopt; // Parallèle au plateau
+    return std::nullopt; 
 
   float t = -rayOrigin.y / rayDir.y;
   if (t < 0)
-    return std::nullopt; // Le plateau est derrière la caméra
+    return std::nullopt; 
 
   glm::vec3 hitPoint = rayOrigin + t * rayDir;
-
-  // 5. Conversion en coordonnées de plateau (0 à 7)
-  // On arrondit car tes cases sont centrées sur des entiers (x, 0, y)
   int boardX = std::floor(hitPoint.x + 0.5f);
   int boardY = std::floor(hitPoint.z + 0.5f);
 

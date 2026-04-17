@@ -71,8 +71,6 @@ private:
 
   AssetManager assetManager;
     
-  // Optionnel mais recommandé : stocker les pointeurs vers tes modèles 
-  // pour éviter de les re-demander à l'AssetManager à CHAQUE frame
   std::shared_ptr<Model3D> modelPawn;
   std::shared_ptr<Model3D> modelRook;
   std::shared_ptr<Model3D> modelKnight;

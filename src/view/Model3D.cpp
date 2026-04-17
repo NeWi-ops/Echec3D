@@ -13,7 +13,7 @@ Model3D::Model3D(const std::string& filepath) {
 
     std::vector<glm::vec3> temp_vertices;
     std::vector<glm::vec3> temp_normals;
-    std::vector<float> final_data; // Données finales pour OpenGL (Position + Normale)
+    std::vector<float> final_data; 
 
     std::ifstream file(filepath);
     if (!file.is_open()) {
@@ -27,24 +27,23 @@ Model3D::Model3D(const std::string& filepath) {
         std::string type;
         iss >> type;
 
-        if (type == "v") { // Sommet (Position)
+        if (type == "v") { 
             glm::vec3 v;
             iss >> v.x >> v.y >> v.z;
             temp_vertices.push_back(v);
         } 
-        else if (type == "vn") { // Normale (Lumière)
+        else if (type == "vn") { 
             glm::vec3 vn;
             iss >> vn.x >> vn.y >> vn.z;
             temp_normals.push_back(vn);
         } 
-        else if (type == "f") { // Face (Triangle ou plus)
+        else if (type == "f") { 
             std::vector<std::string> face_vertices;
             std::string vertex;
             while (iss >> vertex) {
                 face_vertices.push_back(vertex);
             }
 
-            // Triangulation (fan depuis face_vertices[0])
             for (size_t i = 1; i + 1 < face_vertices.size(); ++i) {
                 std::string vertices[3] = {face_vertices[0], face_vertices[i], face_vertices[i+1]};
                 
@@ -81,7 +80,6 @@ Model3D::Model3D(const std::string& filepath) {
 
     if (final_data.empty()) return;
 
-    // --- ENVOI À LA CARTE GRAPHIQUE (OPENGL) ---
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
 
@@ -89,11 +87,9 @@ Model3D::Model3D(const std::string& filepath) {
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, final_data.size() * sizeof(float), final_data.data(), GL_STATIC_DRAW);
 
-    // Attribut 0 : Position (3 floats, saut de 6)
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
-    // Attribut 1 : Normale (3 floats, saut de 6, décalage de 3)
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
