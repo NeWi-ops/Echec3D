@@ -8,7 +8,7 @@ std::map<std::string, PieceFactory::CreatorFunc> &PieceFactory::getRegistry() {
 }
 
 void PieceFactory::registerPiece(const std::string &key, CreatorFunc creator) {
-  // On enregistre la clé telle quelle (ex: "Paladin")
+  // On enregistre la clé
   auto &registry = getRegistry();
   std::cout << "[FACTORY] Enregistrement de la piece : " << key << std::endl;
   if (registry.find(key) != registry.end()) {
@@ -24,7 +24,7 @@ std::unique_ptr<Piece> PieceFactory::createPiece(const std::string &key,
                                                  PieceColor color) {
   auto &registry = getRegistry();
 
-  // On cherche la clé exacte
+  // On cherche la clé
   auto it = registry.find(key);
 
   if (it != registry.end()) {
