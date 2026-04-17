@@ -1,4 +1,5 @@
 #include "./game.hpp"
+#include "../utils/StatsLogger.hpp"
 #include "./Arbiter/arbiter.hpp"
 #include "./Factory/factory.hpp"
 #include "./Fen/FenConverter.hpp"
@@ -9,11 +10,11 @@
 #include "./Pieces/queen.hpp"
 #include "./Pieces/rook.hpp"
 #include "./Types/PieceStruct.hpp"
-#include "../utils/StatsLogger.hpp"
 #include <array>
 #include <iostream>
 
-Game::Game() : board(std::make_unique<Board>()), m_currentAppState(AppState::MAIN_MENU) {
+Game::Game()
+    : board(std::make_unique<Board>()), m_currentAppState(AppState::MAIN_MENU) {
   PieceFactory::registerPiece(
       "r", [](PieceColor c) { return std::make_unique<Rook>(c); });
   PieceFactory::registerPiece(
@@ -45,22 +46,25 @@ void Game::reset() {
   // Clean Slate: Reset hazards and alerts
   this->m_cursedSquare = {-1, -1};
   this->m_curseDuration = 0;
-  this->m_curseCooldown = m_cursedSquareEnabled ? RandomGenerator::generateGeometric(0.4) : 0;
-  
+  this->m_curseCooldown =
+      m_cursedSquareEnabled ? RandomGenerator::generateGeometric(0.4) : 0;
+
   m_lightningManager.dismissStrike();
   m_lightningManager.resetTimer();
 }
 
 std::vector<Move> Game::getValidMoves(Coords pos) const {
-    const Piece *piece = board->getPiece(pos);
-    if (!piece) return {};
+  const Piece *piece = board->getPiece(pos);
+  if (!piece)
+    return {};
 
-    if (m_curseDuration > 0 && pos.x == m_cursedSquare.x && pos.y == m_cursedSquare.y) {
-        if (piece->getType() != PieceType::King) {
-            return {}; // Return an empty vector/list. The piece is rooted.
-        }
+  if (m_curseDuration > 0 && pos.x == m_cursedSquare.x &&
+      pos.y == m_cursedSquare.y) {
+    if (piece->getType() != PieceType::King) {
+      return {};
     }
-    return Arbiter::getLegalMoves(*board, pos);
+  }
+  return Arbiter::getLegalMoves(*board, pos);
 }
 
 bool Game::playMove(const Move &moveInput) {
@@ -70,10 +74,11 @@ bool Game::playMove(const Move &moveInput) {
   if (!p || p->getColor() != m_currentTurn)
     return false;
 
-  if (m_curseDuration > 0 && moveInput.from.x == m_cursedSquare.x && moveInput.from.y == m_cursedSquare.y) {
-      if (p->getType() != PieceType::King) {
-          return false;
-      }
+  if (m_curseDuration > 0 && moveInput.from.x == m_cursedSquare.x &&
+      moveInput.from.y == m_cursedSquare.y) {
+    if (p->getType() != PieceType::King) {
+      return false;
+    }
   }
 
   std::vector<Move> legalMoves = getValidMoves(moveInput.from);
@@ -144,28 +149,26 @@ void Game::switchTurn() {
   m_turnCount++;
   board->setTurnCount(m_turnCount);
 
-
-
   if (m_cursedSquareEnabled) {
     if (m_curseDuration > 0) {
-        // Phase 1: Curse is active
-        m_curseDuration--;
-        if (m_curseDuration <= 0) {
-            // Curse dies. Remove it and start cooldown.
-            m_cursedSquare = {-1, -1};
-            m_curseCooldown = RandomGenerator::generateGeometric(0.4);
-            StatsLogger::instance().logCursedSquare(1, m_curseCooldown);
-        }
+      // Phase 1: Curse is active
+      m_curseDuration--;
+      if (m_curseDuration <= 0) {
+        // Curse dies. Remove it and start cooldown.
+        m_cursedSquare = {-1, -1};
+        m_curseCooldown = RandomGenerator::generateGeometric(0.4);
+        StatsLogger::instance().logCursedSquare(1, m_curseCooldown);
+      }
     } else if (m_curseCooldown > 0) {
-        // Phase 2: Board is safe, waiting for next curse
-        m_curseCooldown--;
-        if (m_curseCooldown <= 0) {
-            // Cooldown ends. Spawn new curse.
-            m_cursedSquare.x = RandomGenerator::generateUniformDiscrete(8);
-            m_cursedSquare.y = RandomGenerator::generateUniformDiscrete(8);
-            m_curseDuration = RandomGenerator::generateGeometric(0.1);
-            StatsLogger::instance().logCursedSquare(0, m_curseDuration);
-        }
+      // Phase 2: Board is safe, waiting for next curse
+      m_curseCooldown--;
+      if (m_curseCooldown <= 0) {
+        // Cooldown ends. Spawn new curse.
+        m_cursedSquare.x = RandomGenerator::generateUniformDiscrete(8);
+        m_cursedSquare.y = RandomGenerator::generateUniformDiscrete(8);
+        m_curseDuration = RandomGenerator::generateGeometric(0.1);
+        StatsLogger::instance().logCursedSquare(0, m_curseDuration);
+      }
     }
   }
 
@@ -191,7 +194,7 @@ void Game::undoLastMove() {
 
   if (m_history.empty())
     return;
-    
+
   if (m_lightningManager.hasStruckRecently())
     return;
 
@@ -296,7 +299,8 @@ void Game::loadConfig() {
 void Game::saveConfig() {
   std::ofstream file("config.txt");
   if (file.is_open()) {
-    file << (m_lightningEnabled ? 1 : 0) << " " << (m_cursedSquareEnabled ? 1 : 0);
+    file << (m_lightningEnabled ? 1 : 0) << " "
+         << (m_cursedSquareEnabled ? 1 : 0);
     file.close();
     std::cout << "Config saved." << std::endl;
   }
