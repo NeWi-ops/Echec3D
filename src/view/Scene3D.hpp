@@ -1,5 +1,6 @@
 #pragma once
 #include "../model/game.hpp"
+#include "../customs/customsPiece.hpp"
 #include "imgui.h"
 #include <glad/glad.h>
 #include <glm/glm.hpp>
@@ -77,6 +78,7 @@ private:
   std::shared_ptr<Model3D> modelBishop;
   std::shared_ptr<Model3D> modelQueen;
   std::shared_ptr<Model3D> modelKing;
+  std::shared_ptr<Model3D> modelPaladin;
 
   void updateCameraInput();
 

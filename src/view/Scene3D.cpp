@@ -213,12 +213,13 @@ void Scene3D::init() {
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   glBindVertexArray(0);
 
-  modelPawn   = assetManager.getModel("ressources/models/pawn.obj");
-  modelRook   = assetManager.getModel("ressources/models/rook.obj");
-  modelKnight = assetManager.getModel("ressources/models/knight.obj");
-  modelBishop = assetManager.getModel("ressources/models/bishop.obj");
-  modelQueen  = assetManager.getModel("ressources/models/queen.obj");
-  modelKing   = assetManager.getModel("ressources/models/king.obj");
+  modelPawn    = assetManager.getModel("ressources/models/pawn.obj");
+  modelRook    = assetManager.getModel("ressources/models/rook.obj");
+  modelKnight  = assetManager.getModel("ressources/models/knight.obj");
+  modelBishop  = assetManager.getModel("ressources/models/bishop.obj");
+  modelQueen   = assetManager.getModel("ressources/models/queen.obj");
+  modelKing    = assetManager.getModel("ressources/models/king.obj");
+  modelPaladin = assetManager.getModel("ressources/models/paladin.obj");
   float skyboxVertices[] = {
       -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f,
       -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f,
@@ -403,6 +404,7 @@ void Scene3D::draw(const Game &game, float deltaTime,
         if (masked) continue;
 
         std::shared_ptr<Model3D> currentModel = nullptr;
+        const CustomPiece* customPiece = nullptr;
         switch (p->getType()) {
             case PieceType::Pawn:   currentModel = modelPawn; break;
             case PieceType::Rook:   currentModel = modelRook; break;
@@ -410,7 +412,12 @@ void Scene3D::draw(const Game &game, float deltaTime,
             case PieceType::Bishop: currentModel = modelBishop; break;
             case PieceType::Queen:  currentModel = modelQueen; break;
             case PieceType::King:   currentModel = modelKing; break;
-            default: break;
+            case PieceType::Custom:
+                customPiece = dynamic_cast<const CustomPiece*>(p);
+                if (customPiece && customPiece->getModelId() == "paladin") {
+                    currentModel = modelPaladin;
+                }
+                break;
         }
 
         glm::mat4 pieceModel = glm::mat4(1.0f);
@@ -418,7 +425,10 @@ void Scene3D::draw(const Game &game, float deltaTime,
         if (currentModel && currentModel->getIsLoaded()) {
             pieceModel = glm::translate(pieceModel, glm::vec3(x, 0.05f, y)); 
             
-            if (p->getType() == PieceType::Rook) {
+            if (customPiece) {
+                float s = customPiece->getScale();
+                pieceModel = glm::scale(pieceModel, glm::vec3(s));
+            } else if (p->getType() == PieceType::Rook) {
                 pieceModel = glm::scale(pieceModel, glm::vec3(0.25f));
             } else {
                 pieceModel = glm::scale(pieceModel, glm::vec3(0.15f));
@@ -435,7 +445,10 @@ void Scene3D::draw(const Game &game, float deltaTime,
 
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(pieceModel));
 
-        if (p->getColor() == PieceColor::White) {
+        if (customPiece) {
+          glm::vec3 cm = customPiece->getColorModifier();
+          glUniform3f(uColorLoc, cm.r, cm.g, cm.b);
+        } else if (p->getColor() == PieceColor::White) {
           glUniform3f(uColorLoc, 1.0f, 0.9f, 0.8f); 
         } else {
           glUniform3f(uColorLoc, 0.1f, 0.1f, 0.1f);
@@ -468,7 +481,7 @@ void Scene3D::draw(const Game &game, float deltaTime,
         case PieceType::Bishop: currentModel = modelBishop; break;
         case PieceType::Queen:  currentModel = modelQueen; break;
         case PieceType::King:   currentModel = modelKing; break;
-        default: break;
+        case PieceType::Custom: currentModel = modelPaladin; break;
     }
 
     if (currentModel && currentModel->getIsLoaded()) {
@@ -526,6 +539,7 @@ void Scene3D::draw(const Game &game, float deltaTime,
           case PieceType::Queen:  currentModel = modelQueen; break;
           case PieceType::King:   currentModel = modelKing; break;
           default: break;
+          case PieceType::Custom: currentModel = modelPaladin; break;
       }
 
       if (currentModel && currentModel->getIsLoaded()) {

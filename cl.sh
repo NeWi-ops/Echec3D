@@ -1,1 +1,1 @@
-make && cd ./bin && ./ImGuiTemplate && cd ../..
+make && cd ./bin && LIBGL_ALWAYS_SOFTWARE=1 ./ImGuiTemplate && cd ../..
